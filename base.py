@@ -3,9 +3,6 @@ import sqlite3
 from web3 import Web3
 import json
 
-# Define the fillV3Relay function ABI
-
-
 def decode_input_data(input_data, contract):
    decoded_data = contract.decode_function_input(input_data)
    return decoded_data
@@ -46,7 +43,7 @@ def main():
     last_block = int(result[0]) + 1 if result else 17987144
 
     insert_return_data(contract, cursor, last_block)
-   #  print(last_block)
+    #  print(last_block)
 
     # Define the URL with query parameters
     url = (
@@ -74,7 +71,7 @@ def main():
                
          ))
 
-        # Insert last block number to LastBlock table, update if chain_name already exists
+      # Insert last block number to LastBlock table, update if chain_name already exists
       cursor.execute('''
          INSERT INTO LastBlock (
                chain_name, last_block
@@ -84,7 +81,7 @@ def main():
          'base', int(tx['blockNumber'])
       ))
 
-   # Commit the transaction and close the connection
+    # Commit the transaction and close the connection
     conn.commit()
     conn.close()
 
