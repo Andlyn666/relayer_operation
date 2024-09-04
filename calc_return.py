@@ -29,7 +29,7 @@ def main():
     cursor = conn.cursor()
     
     # Calculate the total return amount and output token = ETH from the first record to the passed block of base by counting the return table
-    cursor.execute('SELECT output_amount FROM Return WHERE block <= ? AND output_token = ?', (passed_block_base, '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913'))
+    cursor.execute('SELECT output_amount FROM Return WHERE output_token = ?', ('0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913',))
     return_amounts = cursor.fetchall()
     total_return_amount = sum(Decimal(amount[0]) for amount in return_amounts)
     print("usdc return: " + str(total_return_amount))
@@ -41,7 +41,7 @@ def main():
     print("usdc fill:   " + str(total_output_amount))
 
         # Calculate the total return amount and output token = ETH from the first record to the passed block of base by counting the return table
-    cursor.execute('SELECT output_amount FROM Return WHERE block <= ? AND output_token = ?', (passed_block_base, '0x4200000000000000000000000000000000000006'))
+    cursor.execute('SELECT output_amount FROM Return WHERE output_token = ?', ('0x4200000000000000000000000000000000000006',))
     return_amounts = cursor.fetchall()
     total_return_amount = sum(Decimal(amount[0]) for amount in return_amounts)
     print("weth return: " + str(total_return_amount))
@@ -52,7 +52,7 @@ def main():
     total_output_amount = sum(Decimal(amount[0]) for amount in fill_amounts)
     print("weth fill:   " + str(total_output_amount))
 
-    cursor.execute('SELECT output_amount FROM Return WHERE block <= ?', (passed_block_base,))
+    cursor.execute('SELECT output_amount FROM Return')
     return_amounts = cursor.fetchall()
     total_return_amount = sum(Decimal(amount[0]) for amount in return_amounts)
     print("total return: " + str(total_return_amount))

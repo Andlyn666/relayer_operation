@@ -64,7 +64,7 @@ def main():
                         input_token, output_token
                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
          ''', (
-               tx['hash'], '0x84A36d2C3d2078c560Ff7b62815138a16671b549', tx['isError'] == '0', int(tx['cumulativeGasUsed']) * int(tx['gasPrice']),
+               tx['hash'], '0x84A36d2C3d2078c560Ff7b62815138a16671b549', tx['txreceipt_status'] == '1', int(tx['cumulativeGasUsed']) * int(tx['gasPrice']),
                'base', int(tx['timeStamp']), int(tx['blockNumber']), decode_input['originChainId'],
                decode_input['inputAmount'], decode_input['outputAmount'], decode_input['depositId'],
                decode_input['inputToken'], decode_input['outputToken']
