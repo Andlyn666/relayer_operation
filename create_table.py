@@ -16,16 +16,16 @@ CREATE TABLE IF NOT EXISTS Fill (
     tx_hash TEXT PRIMARY KEY,
     input_token TEXT,
     output_token TEXT,
-    input_amount INTEGER,
-    output_amount INTEGER,
+    input_amount TEXT,
+    output_amount TEXT,
     relayer TEXT,
     is_success BOOLEAN,
-    gas INTEGER,
+    gas TEXT,
     origin_chain TEXT,
     aim_chain TEXT,
     deposit_id TEXT,
-    time_stamp INTEGER,
-    block INTEGER,
+    time_stamp TEXT,
+    block TEXT,
     FOREIGN KEY (deposit_id) REFERENCES Deposit(deposit_id)
 )
 ''')
@@ -35,11 +35,11 @@ cursor.execute('''
 CREATE TABLE IF NOT EXISTS Return (
     tx_hash TEXT,
     output_token TEXT,
-    output_amount INTEGER,
+    output_amount TEXT,
     aim_chain TEXT,
-    block INTEGER,
-    time_stamp INTEGER,
-    PRIMARY KEY (tx_hash, output_token)
+    block TEXT,
+    time_stamp TEXT,
+    PRIMARY KEY (tx_hash, output_token, aim_chain)
 )
 ''')
 

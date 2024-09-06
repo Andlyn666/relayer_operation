@@ -6,6 +6,8 @@ from decimal import Decimal
 from dotenv import load_dotenv
 import os
 from datetime import datetime
+from base import update_base
+from op import update_op
 
 def get_pass_challenge_priod_block(chain):
     abi = ''
@@ -23,18 +25,20 @@ def get_pass_challenge_priod_block(chain):
             break
     if chain == "base":
         return passed_block_event['args']['bundleEvaluationBlockNumbers'][6]
+    if chain == "op":
+        return passed_block_event['args']['bundleEvaluationBlockNumbers'][1]
 
-def calc_total_amount(cursor, passed_block, output_token, token_name):
+def calc_total_amount(cursor, passed_block, output_token, token_name, chain):
     
-    cursor.execute('SELECT output_amount FROM Return WHERE output_token = ?', (output_token,))
+    cursor.execute('SELECT output_amount FROM Return WHERE output_token = ? AND aim_chain = ?', (output_token, chain))
     return_amounts = cursor.fetchall()
     total_return_amount = sum(Decimal(amount[0]) for amount in return_amounts)
     
-    cursor.execute('SELECT output_amount FROM Fill WHERE block <= ? AND output_token = ? AND is_success = 1', (passed_block, output_token))
+    cursor.execute('SELECT output_amount FROM Fill WHERE block <= ? AND output_token = ? AND is_success = 1 AND aim_chain = ?', (passed_block, output_token, chain))
     fill_amounts = cursor.fetchall()
     total_output_amount = sum(Decimal(amount[0]) for amount in fill_amounts)
 
-    cursor.execute('SELECT gas FROM Fill WHERE block <= ? AND output_token = ?', (passed_block, output_token))
+    cursor.execute('SELECT gas FROM Fill WHERE block <= ? AND output_token = ? AND aim_chain = ?', (passed_block, output_token, chain))
     gas_amounts = cursor.fetchall()
     total_gas_amount = sum(Decimal(amount[0]) for amount in gas_amounts)
     total_gas_amount = total_gas_amount / 1000000000000000000
@@ -54,7 +58,7 @@ def calc_total_amount(cursor, passed_block, output_token, token_name):
         print(f"{token_name} return: {total_return_amount} fill: {total_output_amount}  profit: {profit} about {profit * 2400} USD")
 
 
-def calc_daily_count(cursor, output_token, token_name):
+def calc_daily_count(cursor, output_token, token_name, chain):
     # get the total amount of the fill record of each day
     time_stamp = 1724860800
     # # select time_stamp from variable table if exists
@@ -63,18 +67,18 @@ def calc_daily_count(cursor, output_token, token_name):
     # if result:
     #     time_stamp = int(result[0])
     while time_stamp < time.time():
-        cursor.execute('SELECT output_amount FROM Fill WHERE time_stamp <= ? AND time_stamp >= ? AND output_token = ? AND is_success = 1', (time_stamp, time_stamp - 86400, output_token))
+        cursor.execute('SELECT output_amount FROM Fill WHERE time_stamp <= ? AND time_stamp >= ? AND output_token = ? AND is_success = 1 AND aim_chain = ?', (time_stamp, time_stamp - 86400, output_token, chain))
         fill_amounts = cursor.fetchall()
         total_output_amount = sum(Decimal(amount[0]) for amount in fill_amounts)
 
-        cursor.execute('SELECT gas FROM Fill WHERE time_stamp <= ? AND time_stamp >= ? AND output_token = ?', (time_stamp, time_stamp - 86400, output_token))
+        cursor.execute('SELECT gas FROM Fill WHERE time_stamp <= ? AND time_stamp >= ? AND output_token = ? AND aim_chain = ? ', (time_stamp, time_stamp - 86400, output_token, chain))
         gas_amounts = cursor.fetchall()
         total_gas_amount = sum(Decimal(amount[0]) for amount in gas_amounts)
         total_gas_amount = total_gas_amount / 1000000000000000000
 
         total_order_number = len(gas_amounts)
         success_order_number = len(fill_amounts)
-        cursor.execute('SELECT output_amount FROM Return WHERE time_stamp <= ? AND time_stamp >= ? AND output_token = ?', (time_stamp, time_stamp - 86400, output_token))
+        cursor.execute('SELECT output_amount FROM Return WHERE time_stamp <= ? AND time_stamp >= ? AND output_token = ? AND aim_chain = ?', (time_stamp, time_stamp - 86400, output_token, chain))
         return_amounts = cursor.fetchall()
         total_return_amount = sum(Decimal(amount[0]) for amount in return_amounts)
         if (token_name == 'usdc'):
@@ -94,24 +98,22 @@ def calc_daily_count(cursor, output_token, token_name):
 
 def main():
     load_dotenv()
-    passed_block_base = get_pass_challenge_priod_block("base")
-    
+    update_base()
+    update_op()
     conn = sqlite3.connect('mydatabase.db')
     cursor = conn.cursor()
     
-    calc_total_amount(cursor, passed_block_base, '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913', 'usdc')
-    calc_total_amount(cursor, passed_block_base, '0x4200000000000000000000000000000000000006', 'weth')
-    time_stamp = calc_daily_count(cursor, '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913', 'usdc')
+    passed_block_base = get_pass_challenge_priod_block("base")
+    calc_total_amount(cursor, passed_block_base, '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913', 'usdc', 'base')
+
+    calc_daily_count(cursor, '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913', 'usdc', 'base')
     # insert the timestamp to the last block table
-    time_stamp = calc_daily_count(cursor, '0x4200000000000000000000000000000000000006', 'weth')
-    cursor.execute('''
-        INSERT INTO Variable (
-            name, value
-        ) VALUES (?, ?)
-        ON CONFLICT(name) DO UPDATE SET value=excluded.value
-    ''', (
-        'last_time', time_stamp
-    ))
+    calc_daily_count(cursor, '0x4200000000000000000000000000000000000006', 'weth', 'base')
+
+    passed_block_op = get_pass_challenge_priod_block("op")
+    calc_total_amount(cursor, passed_block_op, '0x4200000000000000000000000000000000000006', 'weth', 'op')
+    calc_daily_count(cursor, '0x4200000000000000000000000000000000000006', 'weth', 'op')
+    
 
 if __name__ == "__main__":
     main()
