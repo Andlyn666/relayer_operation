@@ -24,7 +24,7 @@ CREATE TABLE IF NOT EXISTS Fill (
     origin_chain TEXT,
     aim_chain TEXT,
     deposit_id TEXT,
-    timestamp INTEGER,
+    time_stamp INTEGER,
     block INTEGER,
     FOREIGN KEY (deposit_id) REFERENCES Deposit(deposit_id)
 )
@@ -38,15 +38,16 @@ CREATE TABLE IF NOT EXISTS Return (
     output_amount INTEGER,
     aim_chain TEXT,
     block INTEGER,
+    time_stamp INTEGER,
     PRIMARY KEY (tx_hash, output_token)
 )
 ''')
 
 # Create LastBlock table to record the last block number of each chain
 cursor.execute('''
-CREATE TABLE IF NOT EXISTS LastBlock (
-    chain_name TEXT PRIMARY KEY,
-    last_block INTEGER
+CREATE TABLE IF NOT EXISTS Variable (
+    name TEXT PRIMARY KEY,
+    value TEXT
 )
 ''')
 
