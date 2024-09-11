@@ -58,6 +58,7 @@ CREATE TABLE IF NOT EXISTS Variable (
 cursor.execute('''
 CREATE TABLE IF NOT EXISTS Bundle (
     bundle_id TEXT,
+    refund_root TEXT,
     chain TEXT,
     end_block INTEGER,
     PRIMARY KEY (bundle_id, chain)
