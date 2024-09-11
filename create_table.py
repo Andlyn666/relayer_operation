@@ -8,7 +8,8 @@ cursor = conn.cursor()
 
 cursor.execute('DROP TABLE IF EXISTS Fill')
 cursor.execute('DROP TABLE IF EXISTS Return')
-cursor.execute('DROP TABLE IF EXISTS LastBlock')
+cursor.execute('DROP TABLE IF EXISTS Variable')
+cursor.execute('DROP TABLE IF EXISTS Bundle')
 
 # Create Fill table
 cursor.execute('''
@@ -25,8 +26,9 @@ CREATE TABLE IF NOT EXISTS Fill (
     aim_chain TEXT,
     deposit_id TEXT,
     time_stamp TEXT,
-    block TEXT,
-    FOREIGN KEY (deposit_id) REFERENCES Deposit(deposit_id)
+    block INTEGER,
+    bundle_id TEXT,
+    is_return BOOLEAN
 )
 ''')
 
@@ -37,17 +39,28 @@ CREATE TABLE IF NOT EXISTS Return (
     output_token TEXT,
     output_amount TEXT,
     aim_chain TEXT,
-    block TEXT,
+    block INTEGER,
     time_stamp TEXT,
+    bundle_id TEXT,
     PRIMARY KEY (tx_hash, output_token, aim_chain)
 )
 ''')
 
-# Create LastBlock table to record the last block number of each chain
+# Create Variable table to record the last block number of each chain
 cursor.execute('''
 CREATE TABLE IF NOT EXISTS Variable (
     name TEXT PRIMARY KEY,
     value TEXT
+)
+''')
+
+# Create Bundle table
+cursor.execute('''
+CREATE TABLE IF NOT EXISTS Bundle (
+    bundle_id TEXT,
+    chain TEXT,
+    end_block INTEGER,
+    PRIMARY KEY (bundle_id, chain)
 )
 ''')
 
