@@ -1,19 +1,15 @@
 import requests
 import sqlite3
 from web3 import Web3
-import json
-from dotenv import load_dotenv
 import os
-
 from tool import create_w3_contract, get_deposit_time, get_lp_fee
-
 
 def decode_input_data(input_data, contract):
     decoded_data = contract.decode_function_input(input_data)
     return decoded_data
 
 
-def insert_return_data(contract, cursor, web3, block=17987144):
+def insert_return_data(contract, cursor, web3, block=247258146):
     event_list = contract.events.ExecutedRelayerRefundRoot.create_filter(
         from_block=block
     ).get_all_entries()
@@ -40,7 +36,7 @@ def insert_return_data(contract, cursor, web3, block=17987144):
                             event["transactionHash"].hex(),
                             event["args"]["l2TokenAddress"],
                             event["args"]["refundAmounts"][index],
-                            "op",
+                            "arb",
                             int(event["blockNumber"]),
                             timestamp,
                             event["args"]["rootBundleId"],
@@ -51,34 +47,32 @@ def insert_return_data(contract, cursor, web3, block=17987144):
     return
 
 
-def get_latest_op_block(cursor):
+def get_latest_arb_block(cursor):
     # Get the last block number from Variable table
-    cursor.execute("SELECT value FROM Variable WHERE name = ?", ("op_block",))
+    cursor.execute("SELECT value FROM Variable WHERE name = ?", ("arb_block",))
     result = cursor.fetchone()
-    last_block = int(result[0]) + 1 if result else 123801280
+    last_block = int(result[0]) + 1 if result else 247258146
     return last_block
 
 
-def update_op():
-    print("Updating op")
+def update_arb():
+    print("Updating arb")
     global op_spoke, base_spoke, arb_spoke, eth_spoke
     op_spoke, base_spoke, arb_spoke, eth_spoke = create_w3_contract()
-
-    op_rpc = os.getenv("OP_RPC")
-    web3 = Web3(Web3.HTTPProvider(op_rpc))
-
-    contract = op_spoke
+    arb_rpc = os.getenv("ARB_RPC")
+    web3 = Web3(Web3.HTTPProvider(arb_rpc))
+    # Define the contract address and create a contract instance
+    contract = arb_spoke
     # Connect to SQLite database (or create it if it doesn't exist)
     conn = sqlite3.connect("mydatabase.db")
     cursor = conn.cursor()
 
-    last_block = get_latest_op_block(cursor)
+    last_block = get_latest_arb_block(cursor)
 
-    insert_return_data(contract, cursor, web3, last_block)
     #  print(last_block)
-    op_key = os.getenv("OP_KEY")
+    arb_key = os.getenv("ARB_KEY")
     # Define the URL with query parameters
-    url = f"https://api-optimistic.etherscan.io/api?module=account&action=txlist&address=0x84A36d2C3d2078c560Ff7b62815138a16671b549&startblock={last_block}&endblock=999999999&sort=asc&apikey={op_key}"
+    url = f"https://api.arbiscan.io/api?module=account&action=txlist&address=0x84A36d2C3d2078c560Ff7b62815138a16671b549&startblock={last_block}&endblock=999999999&sort=asc&apikey={arb_key}"
     response = requests.get(url)
     data = response.json()
     for tx in data["result"]:
@@ -99,7 +93,7 @@ def update_op():
                     "0x84A36d2C3d2078c560Ff7b62815138a16671b549",
                     tx["txreceipt_status"] == "1",
                     str(int(tx["gasUsed"]) * int(tx["gasPrice"])),
-                    "op",
+                    "arb",
                     tx["timeStamp"],
                     str(tx["blockNumber"]),
                     decode_input["originChainId"],
@@ -119,9 +113,9 @@ def update_op():
          ) VALUES (?, ?)
          ON CONFLICT(name) DO UPDATE SET value=excluded.value
         """,
-            ("op_block", tx["blockNumber"]),
+            ("arb_block", tx["blockNumber"]),
         )
-
+    insert_return_data(contract, cursor, web3, last_block)
     # Commit the transaction and close the connection
     conn.commit()
     conn.close()

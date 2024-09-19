@@ -5,6 +5,7 @@ from dotenv import load_dotenv
 from datetime import datetime
 from base import update_base, get_latest_base_block
 from op import update_op, get_latest_op_block
+import pandas as pd
 
 
 
@@ -66,14 +67,16 @@ def calc_daily_count(cursor, output_token, token_name, chain):
     # if result:
     #     time_stamp = int(result[0])
     print(f"Chain {chain} {token_name} :")
+    data = []
     while time_stamp < time.time():
         cursor.execute(
-            "SELECT output_amount, input_amount FROM Fill WHERE time_stamp <= ? AND time_stamp >= ? AND output_token = ? AND is_success = 1 AND aim_chain = ?",
+            "SELECT output_amount, input_amount, lp_fee, gas FROM Fill WHERE time_stamp <= ? AND time_stamp >= ? AND output_token = ? AND is_success = 1 AND aim_chain = ?",
             (time_stamp, time_stamp - 86400, output_token, chain),
         )
         fill_amounts = cursor.fetchall()
         total_output_amount = sum(Decimal(amount[0]) for amount in fill_amounts)
         total_input_amount = sum(Decimal(amount[1]) for amount in fill_amounts)
+        total_lp_fee = sum(Decimal(amount[2]) for amount in fill_amounts)
         cursor.execute(
             "SELECT gas FROM Fill WHERE time_stamp <= ? AND time_stamp >= ? AND output_token = ? AND aim_chain = ? ",
             (time_stamp, time_stamp - 86400, output_token, chain),
@@ -87,8 +90,9 @@ def calc_daily_count(cursor, output_token, token_name, chain):
         if token_name == "usdc":
             total_output_amount = total_output_amount / 1000000
             total_input_amount = total_input_amount / 1000000
+            total_lp_fee = total_lp_fee / 1000000
             total_gas_usd = total_gas_amount * 2400
-            profit = total_input_amount - total_output_amount - total_gas_usd
+            profit = total_input_amount - total_output_amount - total_gas_usd - total_lp_fee
             date_str = datetime.fromtimestamp(time_stamp).strftime("%Y%m%d")
             print(
                 f"{date_str}  profit: {profit} USD fill order: {total_order_number} success order: {success_order_number}"
@@ -96,18 +100,33 @@ def calc_daily_count(cursor, output_token, token_name, chain):
         if token_name == "weth":
             total_output_amount = total_output_amount / 1000000000000000000
             total_input_amount = total_input_amount / 1000000000000000000
-            profit = total_input_amount - total_output_amount - total_gas_amount
+            total_lp_fee = total_lp_fee / 1000000000000000000
+            profit = total_input_amount - total_output_amount - total_gas_amount - total_lp_fee
             date_str = datetime.fromtimestamp(time_stamp).strftime("%Y%m%d")
             print(
                 f"{date_str}  profit: {profit} ETH fill order: {total_order_number} success order: {success_order_number}"
             )
+        if token_name == "wbtc":
+            total_output_amount = total_output_amount / 100000000
+            total_input_amount = total_input_amount / 100000000
+            total_lp_fee = total_lp_fee / 100000000
+            total_gas_amount = Decimal(total_gas_amount) / Decimal(24.57)
+            profit = Decimal(total_input_amount) - Decimal(total_output_amount) - Decimal(total_gas_amount) - Decimal(total_lp_fee)
+            date_str = datetime.fromtimestamp(time_stamp).strftime("%Y%m%d")
+            print(
+                f"{date_str}  profit: {profit} BTC fill order: {total_order_number} success order: {success_order_number}"
+            )
+        data.append([date_str, profit, total_order_number, success_order_number, total_input_amount, total_output_amount, total_lp_fee])
         time_stamp += 86400
+    df = pd.DataFrame(data, columns=["Date", "Profit", "Total Fill Orders", "Successful Orders", "Total Input Amount", "Total Output Amount", "Total LP Fee"])
+    
+    with pd.ExcelWriter('daily_count.xlsx', mode='a', engine='openpyxl', if_sheet_exists='replace') as writer:
+        df.to_excel(writer, sheet_name=f'{chain}_{token_name}', index=False)
+
     return time_stamp
 
 
 def calc_daily():
-    update_base()
-    update_op()
     conn = sqlite3.connect("mydatabase.db")
     cursor = conn.cursor()
     calc_daily_count(
@@ -117,6 +136,12 @@ def calc_daily():
     calc_daily_count(
         cursor, "0x4200000000000000000000000000000000000006", "weth", "base"
     )
-
     calc_daily_count(cursor, "0x4200000000000000000000000000000000000006", "weth", "op")
+
+    calc_daily_count(
+        cursor, "0x82aF49447D8a07e3bd95BD0d56f35241523fBab1","weth", "arb"
+    )
+    calc_daily_count(
+        cursor, "0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599","wbtc", "eth"
+    )
     conn.close()

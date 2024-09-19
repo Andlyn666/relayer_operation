@@ -2,9 +2,8 @@ import requests
 import sqlite3
 from web3 import Web3
 import json
-from dotenv import load_dotenv
 import os
-
+from tool import create_w3_contract, get_deposit_time, get_lp_fee
 
 def decode_input_data(input_data, contract):
     decoded_data = contract.decode_function_input(input_data)
@@ -25,7 +24,6 @@ def insert_return_data(contract, cursor, web3, block=17987144):
             indices = [
                 i for i, addr in enumerate(refund_addresses) if addr == address_to_check
             ]
-
             for index in indices:
                 try:
                     cursor.execute(
@@ -58,23 +56,18 @@ def get_latest_base_block(cursor):
 
 
 def update_base():
-    load_dotenv()
-    abi = ""
-    with open("spoke_abi.json", "r", encoding="utf-8") as file:
-        abi = json.load(file)
+    print("Updating base")
+    global op_spoke, base_spoke, arb_spoke, eth_spoke
+    op_spoke, base_spoke, arb_spoke, eth_spoke = create_w3_contract()
     base_rpc = os.getenv("BASE_RPC")
     web3 = Web3(Web3.HTTPProvider(base_rpc))
-    # Define the contract address and create a contract instance
-    contract_address = web3.to_checksum_address(
-        "0x09aea4b2242abc8bb4bb78d537a67a245a7bec64"
-    )
-    contract = web3.eth.contract(address=contract_address, abi=abi)
+    contract = base_spoke
     # Connect to SQLite database (or create it if it doesn't exist)
     conn = sqlite3.connect("mydatabase.db")
     cursor = conn.cursor()
 
     last_block = get_latest_base_block(cursor)
-    insert_return_data(contract, cursor, web3, last_block)
+    
     #  print(last_block)
     base_key = os.getenv("BASE_KEY")
     # Define the URL with query parameters
@@ -110,7 +103,7 @@ def update_base():
                     decode_input["outputAmount"],
                     decode_input["depositId"],
                     decode_input["inputToken"],
-                    decode_input["outputToken"],
+                    decode_input["outputToken"]
                 ),
             )
 
@@ -124,7 +117,7 @@ def update_base():
         """,
             ("base_block", int(tx["blockNumber"])),
         )
-
+    insert_return_data(contract, cursor, web3, last_block)
     # Commit the transaction and close the connection
     conn.commit()
     conn.close()

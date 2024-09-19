@@ -25,10 +25,12 @@ CREATE TABLE IF NOT EXISTS Fill (
     origin_chain TEXT,
     aim_chain TEXT,
     deposit_id TEXT,
+    deposit_time TEXT,
     time_stamp TEXT,
     block INTEGER,
     bundle_id TEXT,
-    is_return BOOLEAN
+    is_return BOOLEAN,
+    lp_fee TEXT
 )
 ''')
 
