@@ -265,3 +265,11 @@ def update_deposit_time():
     conn.commit()
     conn.close()
     return
+
+def get_token_price(token):
+    key = os.getenv("COIN_KEY")
+    url = f"https://api.coingecko.com/api/v3/simple/price?ids={token}&vs_currencies=usd&x_cg_demo_api_key={key}"
+    print(url)
+    response = requests.get(url)
+    data = response.json()
+    return data[token]["usd"]
