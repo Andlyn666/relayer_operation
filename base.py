@@ -68,7 +68,6 @@ def update_base():
 
     last_block = get_latest_base_block(cursor)
     
-    #  print(last_block)
     base_key = os.getenv("BASE_KEY")
     # Define the URL with query parameters
     url = f"https://api.basescan.org/api?module=account&action=txlist&address=0x84A36d2C3d2078c560Ff7b62815138a16671b549&startblock={last_block}&endblock=99999999&sort=asc&apikey={base_key}"

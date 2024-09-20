@@ -16,21 +16,21 @@ def main():
     #update_the_bundle('base', 19008104, 4857)
     # update_base()
     
-    # #calc_return("base")
+    calc_return("base")
 
     # update_op()
     #update_the_bundle("op", 123939334, 5784)
-    # #calc_return("op")
+    calc_return("op")
 
     # update_arb()
-    # #update_the_bundle("arb", 247363892, 6080)
-    # #calc_return("arb")
+    #update_the_bundle("arb", 247363892, 6080)
+    calc_return("arb")
     
     # update_eth()
     #update_the_bundle('eth', 19008104, 4857)
-    #calc_return("eth")
+    calc_return("eth")
 
-    calc_daily()
+    #calc_daily()
 
 
 if __name__ == "__main__":

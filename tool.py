@@ -47,70 +47,75 @@ def update_the_bundle(chain, start_block, start_id):
     propose_list = contract.events.ProposeRootBundle.create_filter(
         from_block=14819537
     ).get_all_entries()
-    bundle_id = 0
+    relayer_root_list = []
     for event in propose_list:
-        bundle_id = get_event_bundle_id(chain, event["args"]["relayerRefundRoot"])
-        bundle_numbers = event["args"].get("bundleEvaluationBlockNumbers", [])
-        if chain == "base" and len(bundle_numbers) >= 7:
-            if bundle_numbers[6] >= start_block:
-                cursor.execute(
-                    """
-                    INSERT INTO Bundle (
-                    chain, bundle_id, end_block, refund_root
-                    ) VALUES (?, ?, ?, ?) 
-                    """,
-                    (
-                        chain,
-                        bundle_id,
-                        bundle_numbers[6],
-                        event["args"]["relayerRefundRoot"],
-                    ),
-                )
-        if chain == "op" and len(bundle_numbers) >= 2:
-            if bundle_numbers[1] >= start_block:
-                cursor.execute(
-                    """
-                    INSERT INTO Bundle (
-                    chain, bundle_id, end_block, refund_root
-                    ) VALUES (?, ?, ?, ?) 
-                    """,
-                    (
-                        chain,
-                        bundle_id,
-                        bundle_numbers[1],
-                        event["args"]["relayerRefundRoot"],
-                    ),
-                )
-        if chain == "arb" and len(bundle_numbers) >= 5:
-            if bundle_numbers[4] >= start_block:
-                cursor.execute(
-                    """
-                    INSERT INTO Bundle (
-                    chain, bundle_id, end_block, refund_root
-                    ) VALUES (?, ?, ?, ?) 
-                    """,
-                    (
-                        chain,
-                        bundle_id,
-                        bundle_numbers[4],
-                        event["args"]["relayerRefundRoot"],
-                    ),
-                )
-        if chain == "eth" and len(bundle_numbers) >= 1:
-            if bundle_numbers[0] >= start_block:
-                cursor.execute(
-                    """
-                    INSERT INTO Bundle (
-                    chain, bundle_id, end_block, refund_root
-                    ) VALUES (?, ?, ?, ?) 
-                    """,
-                    (
-                        chain,
-                        bundle_id,
-                        bundle_numbers[0],
-                        event["args"]["relayerRefundRoot"],
-                    ),
-                )
+        relayer_root_list.append(event["args"]["relayerRefundRoot"])
+    bundle_event_list = get_event_bundle_id(chain, relayer_root_list)
+    for event in propose_list:
+        for bundle_event in bundle_event_list:
+            if event["args"]["relayerRefundRoot"] == bundle_event["args"]["relayerRefundRoot"]:
+                bundle_id = bundle_event["args"]["rootBundleId"]
+                bundle_numbers = event["args"].get("bundleEvaluationBlockNumbers", [])
+                if chain == "base" and len(bundle_numbers) >= 7:
+                    if bundle_numbers[6] >= start_block:
+                        cursor.execute(
+                            """
+                            INSERT INTO Bundle (
+                            chain, bundle_id, end_block, refund_root
+                            ) VALUES (?, ?, ?, ?) 
+                            """,
+                            (
+                                chain,
+                                bundle_id,
+                                bundle_numbers[6],
+                                event["args"]["relayerRefundRoot"],
+                            ),
+                        )
+                if chain == "op" and len(bundle_numbers) >= 2:
+                    if bundle_numbers[1] >= start_block:
+                        cursor.execute(
+                            """
+                            INSERT INTO Bundle (
+                            chain, bundle_id, end_block, refund_root
+                            ) VALUES (?, ?, ?, ?) 
+                            """,
+                            (
+                                chain,
+                                bundle_id,
+                                bundle_numbers[1],
+                                event["args"]["relayerRefundRoot"],
+                            ),
+                        )
+                if chain == "arb" and len(bundle_numbers) >= 5:
+                    if bundle_numbers[4] >= start_block:
+                        cursor.execute(
+                            """
+                            INSERT INTO Bundle (
+                            chain, bundle_id, end_block, refund_root
+                            ) VALUES (?, ?, ?, ?) 
+                            """,
+                            (
+                                chain,
+                                bundle_id,
+                                bundle_numbers[4],
+                                event["args"]["relayerRefundRoot"],
+                            ),
+                        )
+                if chain == "eth" and len(bundle_numbers) >= 1:
+                    if bundle_numbers[0] >= start_block:
+                        cursor.execute(
+                            """
+                            INSERT INTO Bundle (
+                            chain, bundle_id, end_block, refund_root
+                            ) VALUES (?, ?, ?, ?) 
+                            """,
+                            (
+                                chain,
+                                bundle_id,
+                                bundle_numbers[0],
+                                event["args"]["relayerRefundRoot"],
+                            ),
+                        )
     conn.commit()
     update_variable(f"last_{chain}_bundle_id", bundle_id)
 
@@ -196,7 +201,7 @@ def get_deposit_time(deposit_id_array):
     return event_list
 
 # listen to the RelayedRootBundle event and filter the deposit_id to get the quoteTimestamp
-def get_event_bundle_id(chain, relayer_root):
+def get_event_bundle_id(chain, relayer_root_array):
     contract = None
     start_block = 0
     chain = str(chain)
@@ -213,11 +218,9 @@ def get_event_bundle_id(chain, relayer_root):
         contract = arb_spoke
         start_block = 245270149
 
-    event_list = contract.events.RelayedRootBundle.create_filter(from_block = start_block, argument_filters={'relayerRefundRoot' : relayer_root}
+    event_list = contract.events.RelayedRootBundle.create_filter(from_block = start_block, argument_filters={'relayerRefundRoot' : relayer_root_array}
     ).get_all_entries()
-    for event in event_list:
-        return event["args"]["rootBundleId"]
-    return
+    return event_list
 
 def get_lp_fee(input_token, output_token, origin_chian_id, dest_chain_id, amount, timestamp):
     url = f"https://app.across.to/api/suggested-fees?inputToken={input_token}&outputToken={output_token}&originChainId={origin_chian_id}&destinationChainId={dest_chain_id}&amount={amount}&timestamp={timestamp}"

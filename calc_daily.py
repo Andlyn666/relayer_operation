@@ -77,7 +77,7 @@ def calc_daily_count(cursor, output_token, token_name, chain):
     # result = cursor.fetchone()
     # if result:
     #     time_stamp = int(result[0])
-    print(f"Chain {chain} {token_name}")
+    print(f"Calculating Chain {chain} {token_name} Daily Count")
     data = []
     while time_stamp < time.time():
         cursor.execute(
@@ -158,7 +158,7 @@ def calc_daily_count(cursor, output_token, token_name, chain):
     return time_stamp
 
 def calc_total_profit(cursor):
-    print("Total Profit")
+    print("Calculating Total Profit")
     data = []
     data = calc_total_amount(cursor, "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913", "usdc", "base", data)
     data = calc_total_amount(cursor, "0x4200000000000000000000000000000000000006", "weth", "base", data)
