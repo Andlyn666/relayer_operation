@@ -12,14 +12,14 @@ import os
 def main():
     load_dotenv()
     create_w3_contract()
-    update_deposit_time()
+    #update_deposit_time()
     #update_the_bundle('base', 19008104, 4857)
     # update_base()
     
     # #calc_return("base")
 
     # update_op()
-    # #update_the_bundle("op", 123939334, 5784)
+    #update_the_bundle("op", 123939334, 5784)
     # #calc_return("op")
 
     # update_arb()

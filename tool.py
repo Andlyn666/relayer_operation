@@ -251,25 +251,27 @@ def update_deposit_time():
         deposit_id_list.append(int(row[0]))
     # get the deposit_event by the deposit_id array
     event_list = get_deposit_time(deposit_id_list)
-    print(event_list)
-    # for row in result:
-    #     for event in event_list:
-    #         if int(row[0]) == int(event["args"]["depositId"]):
-    #             lp_fee = get_lp_fee(row[4], row[5], row[1], get_chain_id(row[2]), row[6], event["args"]["quoteTimestamp"])
-    #             cursor.execute(
-    #                 "UPDATE Fill SET deposit_time = ?, lp_fee = ? WHERE tx_hash = ? AND aim_chain = ?",
-    #                 (event["args"]["quoteTimestamp"], lp_fee, row[3], row[2]),
-    #             )
-    #             break;
+    for row in result:
+        for event in event_list:
+            if int(row[0]) == int(event["args"]["depositId"]):
+                lp_fee = get_lp_fee(row[4], row[5], row[1], get_chain_id(row[2]), row[6], event["args"]["quoteTimestamp"])
+                cursor.execute(
+                    "UPDATE Fill SET deposit_time = ?, lp_fee = ? WHERE tx_hash = ? AND aim_chain = ?",
+                    (event["args"]["quoteTimestamp"], lp_fee, row[3], row[2]),
+                )
+                break;
     
     conn.commit()
     conn.close()
     return
 
-def get_token_price(token):
+def get_token_price(token, currency="usd"):
     key = os.getenv("COIN_KEY")
-    url = f"https://api.coingecko.com/api/v3/simple/price?ids={token}&vs_currencies=usd&x_cg_demo_api_key={key}"
+    url = f"https://api.coingecko.com/api/v3/simple/price?ids={token}&vs_currencies={currency}&x_cg_demo_api_key={key}"
     print(url)
     response = requests.get(url)
     data = response.json()
-    return data[token]["usd"]
+    return data[token][currency]
+
+def round_decimal(value, decimal=3):
+    return round(value, decimal)

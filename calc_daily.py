@@ -3,7 +3,7 @@ import time
 from decimal import Decimal
 from datetime import datetime
 import pandas as pd
-from tool import get_token_price
+from tool import get_token_price, round_decimal
 
 
 #calc total profit of each token in sum of each day
@@ -24,33 +24,49 @@ def calc_total_amount(cursor, output_token, token_name, chain, data):
     total_gas_amount = sum(Decimal(amount[0]) for amount in gas_amounts)
     total_gas_amount = total_gas_amount / 1000000000000000000
 
-    token_price = 0
     profit_usd = 0
+    gas_usd = 0
+    lp_usd = 0
     if token_name == "usdc":
-        token_price = Decimal(get_token_price("usd-coin"))
-        token_price_eth = Decimal(get_token_price("ethereum"))
+
         total_output_amount = total_output_amount / 1000000
         total_input_amount = total_input_amount / 1000000
         total_lp_fee = total_lp_fee / 1000000
-        total_gas_amount = total_gas_amount * token_price_eth
+
+        total_gas_amount = total_gas_amount * eth_price
         profit = total_input_amount - total_output_amount - total_gas_amount - total_lp_fee
-        profit_usd = Decimal(profit) * token_price
+        
+        profit_usd = Decimal(profit) * usdc_price
+        lp_usd = Decimal(total_lp_fee) * usdc_price
+        gas_usd = Decimal(total_gas_amount) * usdc_price
+
     if token_name == "weth":
-        token_price = Decimal(get_token_price("weth"))
         total_output_amount = total_output_amount / 1000000000000000000
         total_input_amount = total_input_amount / 1000000000000000000
         total_lp_fee = total_lp_fee / 1000000000000000000
+
         profit = total_input_amount - total_output_amount - total_gas_amount - total_lp_fee
-        profit_usd = Decimal(profit) * token_price
+        
+        profit_usd = Decimal(profit) * weth_price
+        gas_usd = Decimal(total_gas_amount) * weth_price
+        lp_usd = Decimal(total_lp_fee) * weth_price
+
     if token_name == "wbtc":
-        token_price = Decimal(get_token_price("wrapped-bitcoin"))
         total_output_amount = total_output_amount / 100000000
         total_input_amount = total_input_amount / 100000000
         total_lp_fee = total_lp_fee / 100000000
-        total_gas_amount = Decimal(total_gas_amount) / Decimal(24.57)
-        profit = Decimal(total_input_amount) - Decimal(total_output_amount) - Decimal(total_gas_amount) - Decimal(total_lp_fee)
-        profit_usd = Decimal(profit) * token_price
-    data.append([f'{chain}-{token_name}', profit_usd, total_lp_fee, total_gas_amount])
+
+        total_gas_used = Decimal(total_gas_amount) / Decimal(wbtc_price_eth)
+        profit = Decimal(total_input_amount) - Decimal(total_output_amount) - Decimal(total_gas_used) - Decimal(total_lp_fee)
+        
+        profit_usd = Decimal(profit) * wbtc_price
+        gas_usd = Decimal(total_gas_used) * wbtc_price
+        lp_usd = Decimal(total_lp_fee) * wbtc_price
+    
+    profit_usd = round_decimal(profit_usd)
+    lp_usd = round_decimal(lp_usd)
+    gas_usd = round_decimal(gas_usd)
+    data.append([f'{chain}-{token_name}', profit_usd, lp_usd, gas_usd])
     return data
 
 def calc_daily_count(cursor, output_token, token_name, chain):
@@ -61,7 +77,7 @@ def calc_daily_count(cursor, output_token, token_name, chain):
     # result = cursor.fetchone()
     # if result:
     #     time_stamp = int(result[0])
-    print(f"Chain {chain} {token_name} :")
+    print(f"Chain {chain} {token_name}")
     data = []
     while time_stamp < time.time():
         cursor.execute(
@@ -82,47 +98,59 @@ def calc_daily_count(cursor, output_token, token_name, chain):
 
         total_order_number = len(gas_amounts)
         success_order_number = len(fill_amounts)
-        token_price = 0
+
         profit_usd = 0
+        lp_usd = 0
+        gas_usd = 0
+        date_str = datetime.fromtimestamp(time_stamp).strftime("%Y%m%d")
+
         if token_name == "usdc":
-            token_price = Decimal(get_token_price("usd-coin"))
-            token_price_eth = Decimal(get_token_price("ethereum"))
             total_output_amount = total_output_amount / 1000000
             total_input_amount = total_input_amount / 1000000
             total_lp_fee = total_lp_fee / 1000000
-            total_gas_amount = total_gas_amount * token_price_eth
+
+            total_gas_amount = total_gas_amount * eth_price
             profit = total_input_amount - total_output_amount - total_gas_amount - total_lp_fee
-            profit_usd = Decimal(profit) * token_price
-            date_str = datetime.fromtimestamp(time_stamp).strftime("%Y%m%d")
-            print(
-                f"{date_str}  profit: {profit} USD fill order: {total_order_number} success order: {success_order_number}"
-            )
+            
+            profit_usd = Decimal(profit) * usdc_price
+            lp_usd = Decimal(total_lp_fee) * usdc_price
+            gas_usd = Decimal(total_gas_amount) * usdc_price
+
         if token_name == "weth":
-            token_price = Decimal(get_token_price("weth"))
             total_output_amount = total_output_amount / 1000000000000000000
             total_input_amount = total_input_amount / 1000000000000000000
             total_lp_fee = total_lp_fee / 1000000000000000000
+
             profit = total_input_amount - total_output_amount - total_gas_amount - total_lp_fee
-            profit_usd = Decimal(profit) * token_price
-            date_str = datetime.fromtimestamp(time_stamp).strftime("%Y%m%d")
-            print(
-                f"{date_str}  profit: {profit} ETH fill order: {total_order_number} success order: {success_order_number}"
-            )
+            
+            profit_usd = Decimal(profit) * weth_price
+            lp_usd = Decimal(total_lp_fee) * weth_price
+            gas_usd = Decimal(total_gas_amount) * weth_price
+
         if token_name == "wbtc":
-            token_price = Decimal(get_token_price("wrapped-bitcoin"))
             total_output_amount = total_output_amount / 100000000
             total_input_amount = total_input_amount / 100000000
             total_lp_fee = total_lp_fee / 100000000
-            total_gas_amount = Decimal(total_gas_amount) / Decimal(24.57)
+
+            total_gas_amount = Decimal(total_gas_amount) / Decimal(wbtc_price_eth)
             profit = Decimal(total_input_amount) - Decimal(total_output_amount) - Decimal(total_gas_amount) - Decimal(total_lp_fee)
-            profit_usd = Decimal(profit) * token_price
-            date_str = datetime.fromtimestamp(time_stamp).strftime("%Y%m%d")
-            print(
-                f"{date_str}  profit: {profit} BTC fill order: {total_order_number} success order: {success_order_number}"
-            )
-        data.append([date_str, profit_usd, total_order_number, success_order_number, total_input_amount, total_output_amount, total_lp_fee, total_gas_amount])
+            
+            profit_usd = Decimal(profit) * wbtc_price
+            lp_usd = Decimal(total_lp_fee) * wbtc_price
+            gas_usd = Decimal(total_gas_amount) * wbtc_price
+
+        profit_usd = round_decimal(profit_usd)
+        lp_usd = round_decimal(lp_usd)
+        gas_usd = round_decimal(gas_usd)
+        profit = round_decimal(profit)
+        total_output_amount = round_decimal(total_output_amount)
+        total_input_amount = round_decimal(total_input_amount)
+        total_lp_fee = round_decimal(total_lp_fee, 5)
+        total_gas_amount = round_decimal(total_gas_amount, 8)
+
+        data.append([date_str, profit_usd, total_order_number, success_order_number, total_input_amount, total_output_amount, total_lp_fee, lp_usd, total_gas_amount, gas_usd])
         time_stamp += 86400
-    df = pd.DataFrame(data, columns=["Date", "USD Profit", "Total Fill Orders", "Successful Orders", "Total Input Amount", "Total Output Amount", "Total LP Fee", "Total Gas Fee"])
+    df = pd.DataFrame(data, columns=["Date", "Profit(USD)", "Total Fill Orders", "Successful Orders", "Total Input Amount", "Total Output Amount", "Total LP Fee", "Total LP Fee(USD)","Total Gas Fee", "Total Gas Fee(USD)"])
     
     with pd.ExcelWriter('daily_count.xlsx', mode='a', engine='openpyxl', if_sheet_exists='replace') as writer:
         df.to_excel(writer, sheet_name=f'{chain}_{token_name}', index=False)
@@ -130,33 +158,43 @@ def calc_daily_count(cursor, output_token, token_name, chain):
     return time_stamp
 
 def calc_total_profit(cursor):
+    print("Total Profit")
     data = []
     data = calc_total_amount(cursor, "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913", "usdc", "base", data)
     data = calc_total_amount(cursor, "0x4200000000000000000000000000000000000006", "weth", "base", data)
     data = calc_total_amount(cursor, "0x4200000000000000000000000000000000000006", "weth", "op", data)
     data = calc_total_amount(cursor, "0x82aF49447D8a07e3bd95BD0d56f35241523fBab1","weth", "arb", data)
     data = calc_total_amount(cursor, "0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599","wbtc", "eth", data)
-    df = pd.DataFrame(data, columns=["Token", "USD Profit", "Total LP Fee", "Total Gas Fee"])
+    df = pd.DataFrame(data, columns=["Token", "Profit(USD)", "Total LP Fee(USD)", "Total Gas Fee(USD)"])
     with pd.ExcelWriter('daily_count.xlsx', mode='a', engine='openpyxl', if_sheet_exists='replace') as writer:
         df.to_excel(writer, sheet_name=f'total_profit', index=False)
+
+def get_token_prices():
+    global wbtc_price, weth_price, usdc_price, eth_price, wbtc_price_eth
+    wbtc_price = Decimal(get_token_price("wrapped-bitcoin"))
+    weth_price = Decimal(get_token_price("weth"))
+    usdc_price = Decimal(get_token_price("usd-coin"))
+    eth_price = Decimal(get_token_price("ethereum"))
+    wbtc_price_eth = Decimal(get_token_price("wrapped-bitcoin", "eth"))
 
 def calc_daily():
     conn = sqlite3.connect("mydatabase.db")
     cursor = conn.cursor()
-    # calc_daily_count(
-    #     cursor, "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913", "usdc", "base"
-    # )
-    # # insert the timestamp to the last block table
-    # calc_daily_count(
-    #     cursor, "0x4200000000000000000000000000000000000006", "weth", "base"
-    # )
-    # calc_daily_count(cursor, "0x4200000000000000000000000000000000000006", "weth", "op")
+    get_token_prices()
+    calc_daily_count(
+        cursor, "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913", "usdc", "base"
+    )
+    # insert the timestamp to the last block table
+    calc_daily_count(
+        cursor, "0x4200000000000000000000000000000000000006", "weth", "base"
+    )
+    calc_daily_count(cursor, "0x4200000000000000000000000000000000000006", "weth", "op")
 
-    # calc_daily_count(
-    #     cursor, "0x82aF49447D8a07e3bd95BD0d56f35241523fBab1","weth", "arb"
-    # )
-    # calc_daily_count(
-    #     cursor, "0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599","wbtc", "eth"
-    # )
+    calc_daily_count(
+        cursor, "0x82aF49447D8a07e3bd95BD0d56f35241523fBab1","weth", "arb"
+    )
+    calc_daily_count(
+        cursor, "0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599","wbtc", "eth"
+    )
     calc_total_profit(cursor)
     conn.close()
