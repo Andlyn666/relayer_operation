@@ -1,11 +1,9 @@
 import requests
 import sqlite3
 from web3 import Web3
-import json
-from dotenv import load_dotenv
 import os
 
-from tool import create_w3_contract, get_deposit_time, get_lp_fee
+from tool import create_w3_contract
 
 
 def decode_input_data(input_data, contract):

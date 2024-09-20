@@ -29,7 +29,7 @@ def update_variable(name, value):
     conn.commit()
 
 
-def update_the_bundle(chain, start_block, start_id):
+def update_bundle(chain, start_block, start_id):
     abi = ""
     with open("hub_abi.json", "r", encoding="utf-8") as file:
         abi = json.load(file)
