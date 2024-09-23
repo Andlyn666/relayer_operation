@@ -1,3 +1,7 @@
 .env
 mydatabase.db
 /venv/
+service_account.json
+daily_count.xlsx
+return_data.xlsx
+return_data.xlsx

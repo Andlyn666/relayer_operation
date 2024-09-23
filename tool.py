@@ -29,7 +29,7 @@ def update_variable(name, value):
     conn.commit()
 
 
-def update_bundle(chain, start_block, start_id):
+def update_bundle(chain, start_block):
     abi = ""
     with open("hub_abi.json", "r", encoding="utf-8") as file:
         abi = json.load(file)
@@ -39,18 +39,19 @@ def update_bundle(chain, start_block, start_id):
         "0xc186fA914353c44b2E33eBE05f21846F1048bEda"
     )
     contract = web3.eth.contract(address=contract_address, abi=abi)
-    bundle_id = int(get_variable(f"last_{chain}_bundle_id"))
-    if bundle_id > start_id:
-        start_id = bundle_id
     conn = sqlite3.connect("mydatabase.db")
     cursor = conn.cursor()
+    last_bundle_id = get_variable(f"last_{chain}_bundle_id")
+    last_block = get_block_by_bundle_id(last_bundle_id, chain, cursor) + 1
+    if last_block > start_block:
+        start_block = last_block
     propose_list = contract.events.ProposeRootBundle.create_filter(
         from_block=14819537
     ).get_all_entries()
     relayer_root_list = []
     for event in propose_list:
         relayer_root_list.append(event["args"]["relayerRefundRoot"])
-    bundle_event_list = get_event_bundle_id(chain, relayer_root_list)
+    bundle_event_list = get_event_bundle_id(chain, relayer_root_list, cursor)
     for event in propose_list:
         for bundle_event in bundle_event_list:
             if event["args"]["relayerRefundRoot"] == bundle_event["args"]["relayerRefundRoot"]:
@@ -116,6 +117,7 @@ def update_bundle(chain, start_block, start_id):
                                 event["args"]["relayerRefundRoot"],
                             ),
                         )
+                break
     conn.commit()
     update_variable(f"last_{chain}_bundle_id", bundle_id)
 
@@ -200,23 +202,35 @@ def get_deposit_time(deposit_id_array):
     
     return event_list
 
+def get_block_by_bundle_id(bundle_id, chain, cursor):
+    cursor.execute(
+        "SELECT end_block FROM Bundle WHERE bundle_id = ? AND chain = ?",
+        (bundle_id, chain),
+    )
+    result = cursor.fetchall()
+    if result:
+        return result[0][0]
+    return 0
 # listen to the RelayedRootBundle event and filter the deposit_id to get the quoteTimestamp
-def get_event_bundle_id(chain, relayer_root_array):
+def get_event_bundle_id(chain, relayer_root_array, cursor):
     contract = None
     start_block = 0
     chain = str(chain)
+    last_bundle_id = get_variable(f"last_{chain}_bundle_id")
+    start_block= get_block_by_bundle_id(last_bundle_id, chain, cursor) + 1
+    print(f"start_block: {start_block}")
     if chain == "eth":
         contract = eth_spoke
-        start_block = 20298487
+        start_block = 20298487 if start_block == 0 else start_block
     if chain == "op":
         contract = op_spoke
-        start_block = 123750953
+        start_block = 123750953 if start_block == 0 else start_block
     elif chain == "base":
         contract = base_spoke
-        start_block = 19043282
+        start_block = 19043282 if start_block == 0 else start_block
     elif chain == "arb":
         contract = arb_spoke
-        start_block = 245270149
+        start_block = 245270149 if start_block == 0 else start_block
 
     event_list = contract.events.RelayedRootBundle.create_filter(from_block = start_block, argument_filters={'relayerRefundRoot' : relayer_root_array}
     ).get_all_entries()
@@ -224,7 +238,6 @@ def get_event_bundle_id(chain, relayer_root_array):
 
 def get_lp_fee(input_token, output_token, origin_chian_id, dest_chain_id, amount, timestamp):
     url = f"https://app.across.to/api/suggested-fees?inputToken={input_token}&outputToken={output_token}&originChainId={origin_chian_id}&destinationChainId={dest_chain_id}&amount={amount}&timestamp={timestamp}"
-    print(url)
     try:
         response = requests.get(url)
         data = response.json()
@@ -246,12 +259,14 @@ def update_deposit_time():
     # get all deposit_id from the fill table
     conn = sqlite3.connect("mydatabase.db")
     cursor = conn.cursor()
-    cursor.execute("SELECT deposit_id, origin_chain, aim_chain, tx_hash, input_token, output_token, input_amount FROM Fill WHERE is_success = 1")
+    cursor.execute("SELECT deposit_id, origin_chain, aim_chain, tx_hash, input_token, output_token, input_amount FROM Fill WHERE is_success = 1 AND deposit_time is NULL")
     result = cursor.fetchall()
     # put deposit_id into array
     deposit_id_list = []
     for row in result:
         deposit_id_list.append(int(row[0]))
+    if len(deposit_id_list) == 0:
+        return
     # get the deposit_event by the deposit_id array
     event_list = get_deposit_time(deposit_id_list)
     for row in result:
@@ -271,7 +286,6 @@ def update_deposit_time():
 def get_token_price(token, currency="usd"):
     key = os.getenv("COIN_KEY")
     url = f"https://api.coingecko.com/api/v3/simple/price?ids={token}&vs_currencies={currency}&x_cg_demo_api_key={key}"
-    print(url)
     response = requests.get(url)
     data = response.json()
     return data[token][currency]
