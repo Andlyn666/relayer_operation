@@ -68,6 +68,7 @@ def calc_return(chain):
     data_usdc = []
     data_weth = []
     data_wbtc = []
+    data_dai = []
     current_bundle_id = get_bundle_id(fill_list[0][13], cursor, chain)
     start_block = fill_list[0][13]
     end_block = 0
@@ -75,7 +76,10 @@ def calc_return(chain):
     weth_address = "0x4200000000000000000000000000000000000006"
     if chain == "arb":
         weth_address = "0x82aF49447D8a07e3bd95BD0d56f35241523fBab1"
+    if chain == "eth":
+        weth_address = "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2"
     wbtc_address = "0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599"
+    dai_address = "0x6B175474E89094C44Da98b954EedeAC495271d0F"
     for fill in fill_list:
         bundle_id = get_bundle_id(fill[13], cursor, chain)
         if bundle_id == 0:
@@ -113,6 +117,16 @@ def calc_return(chain):
                 data_wbtc,
                 wbtc_address,
             )
+            data_dai = calc_bundle(
+                cursor,
+                start_block,
+                end_block,
+                current_bundle_id,
+                chain,
+                "dai",
+                data_dai,
+                dai_address,
+            )
             current_bundle_id = bundle_id
             start_block = int(fill[13])
     conn.close()
@@ -121,6 +135,7 @@ def calc_return(chain):
     # Convert data to DataFrame and write to Excel
     df_weth = pd.DataFrame(data_weth)
     df_wbtc = pd.DataFrame(data_wbtc)
+    df_dai = pd.DataFrame(data_dai)
     # Define the file name
     file_name = "return_data.xlsx"
 
@@ -131,4 +146,6 @@ def calc_return(chain):
             df_weth.to_excel(writer, sheet_name=f"{chain}-WETH", index=False)
         if len(data_wbtc) > 0:
             df_wbtc.to_excel(writer, sheet_name=f"{chain}-WBTC", index=False)
+        if len(data_dai) > 0:
+            df_dai.to_excel(writer, sheet_name=f"{chain}-DAI", index=False)
     return

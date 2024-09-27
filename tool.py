@@ -9,6 +9,7 @@ def get_variable(name):
     cursor = conn.cursor()
     cursor.execute("SELECT value FROM Variable WHERE name = ?", (name,))
     result = cursor.fetchone()
+    conn.close()
     if not result:
         return 1
     return result[0]
@@ -27,7 +28,7 @@ def update_variable(name, value):
             "INSERT INTO Variable (name, value) VALUES (?, ?)", (name, value)
         )
     conn.commit()
-
+    conn.close()
 
 def update_bundle(chain, start_block):
     abi = ""
@@ -119,6 +120,7 @@ def update_bundle(chain, start_block):
                         )
                 break
     conn.commit()
+    conn.close()
     update_variable(f"last_{chain}_bundle_id", bundle_id)
 
 
@@ -259,7 +261,8 @@ def update_deposit_time():
     # get all deposit_id from the fill table
     conn = sqlite3.connect("mydatabase.db")
     cursor = conn.cursor()
-    cursor.execute("SELECT deposit_id, origin_chain, aim_chain, tx_hash, input_token, output_token, input_amount FROM Fill WHERE is_success = 1 AND deposit_time is NULL")
+    dai_address = "0x6B175474E89094C44Da98b954EedeAC495271d0F"
+    cursor.execute("SELECT deposit_id, origin_chain, aim_chain, tx_hash, input_token, output_token, input_amount FROM Fill WHERE is_success = 1 AND deposit_time is NULL AND output_token != ?",(dai_address,) )
     result = cursor.fetchall()
     # put deposit_id into array
     deposit_id_list = []
