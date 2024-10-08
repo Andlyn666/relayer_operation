@@ -35,9 +35,9 @@ def insert_return_data(contract, cursor, web3, block=17987144):
                         (
                             event["transactionHash"].hex(),
                             event["args"]["l2TokenAddress"],
-                            event["args"]["refundAmounts"][index],
+                            str(event["args"]["refundAmounts"][index]),
                             "base",
-                            int(event["blockNumber"]),
+                            event["blockNumber"],
                             timestamp,
                             event["args"]["rootBundleId"],
                         ),

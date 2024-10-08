@@ -21,7 +21,7 @@ def calc_bundle(cursor, start_block, end_block, bundle_id, chain, token, data, t
     )
     fill_amounts = cursor.fetchall()
     total_output_amount = sum(Decimal(amount[0]) for amount in fill_amounts)
-    total_lp_fee = sum(Decimal(amount[2]) for amount in fill_amounts)
+    total_lp_fee = sum(Decimal(amount[2] or 0) for amount in fill_amounts)
     # joint the tx hash with , to show in the excel
     tx_hashs = ", ".join([amount[1] for amount in fill_amounts])
 
