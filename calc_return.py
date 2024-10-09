@@ -1,21 +1,22 @@
 from web3 import Web3
 import sqlite3
 from decimal import Decimal
-from tool import get_bundle_id, get_relayer_root
+from tool import get_bundle_id, get_relayer_root,get_chain_id
 import pandas as pd
 import os
 
 
 def calc_bundle(cursor, start_block, end_block, bundle_id, chain, token, data, token_address):
     # get the sum of the output amount of Fill from start_block to end_block
+    repay_chain_id = get_chain_id(chain)
     cursor.execute(
         """
-        SELECT input_amount, tx_hash, lp_fee FROM Fill WHERE block >= ? AND block <= ? AND aim_chain = ? AND is_success = 1 AND output_token = ?
+        SELECT input_amount, tx_hash, lp_fee FROM Fill WHERE block >= ? AND block <= ? AND repayment_chain = ? AND is_success = 1 AND output_token = ?
         """,
         (
             start_block,
             end_block,
-            chain,
+            repay_chain_id,
             token_address,
         ),
     )
@@ -58,11 +59,12 @@ def calc_bundle(cursor, start_block, end_block, bundle_id, chain, token, data, t
 def calc_return(chain):
     conn = sqlite3.connect("mydatabase.db")
     cursor = conn.cursor()
+    repayment_chain_id = get_chain_id(chain)
     fill_list = cursor.execute(
         """
-        SELECT * FROM Fill WHERE aim_chain = ? AND is_return is NULL AND is_success = 1 ORDER BY block ASC
+        SELECT * FROM Fill WHERE repayment_chain = ? AND is_return is NULL AND is_success = 1 ORDER BY block ASC
         """,
-        (chain,),
+        (repayment_chain_id,),
     ).fetchall()
     print(f"Calculating return for {chain}")
     data_usdc = []
@@ -85,7 +87,6 @@ def calc_return(chain):
         if bundle_id == 0:
             continue  # Skip this iteration instead of breaking
         if bundle_id != current_bundle_id:
-            print(f"Calculating return for bundle {current_bundle_id} chain {chain} from block {start_block} to {end_block}")
             end_block = int(fill[13]) - 1
             data_usdc = calc_bundle(
                 cursor,

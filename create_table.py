@@ -30,7 +30,8 @@ CREATE TABLE IF NOT EXISTS Fill (
     block INTEGER,
     bundle_id TEXT,
     is_return BOOLEAN,
-    lp_fee TEXT
+    lp_fee TEXT,
+    repayment_chain TEXT
 )
 ''')
 

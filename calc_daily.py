@@ -182,6 +182,7 @@ def calc_total_profit(cursor):
     data = calc_total_amount(cursor, "0x82aF49447D8a07e3bd95BD0d56f35241523fBab1","weth", "arb", data)
     data = calc_total_amount(cursor, "0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599","wbtc", "eth", data)
     data = calc_total_amount(cursor, "0x6B175474E89094C44Da98b954EedeAC495271d0F","dai", "eth", data)
+    data = calc_total_amount(cursor, "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2","weth", "eth", data)
     df = pd.DataFrame(data, columns=["Token", "Profit(USD)", "Total LP Fee(USD)", "Total Gas Fee(USD)"])
     with pd.ExcelWriter('daily_count.xlsx', mode='a', engine='openpyxl', if_sheet_exists='replace') as writer:
         df.to_excel(writer, sheet_name=f'total_profit', index=False)

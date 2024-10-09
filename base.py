@@ -1,7 +1,6 @@
 import requests
 import sqlite3
 from web3 import Web3
-import json
 import os
 from tool import create_w3_contract
 
@@ -76,6 +75,7 @@ def update_base():
     for tx in data["result"]:
         if tx["methodId"] == "0x2e378115":
             decode_input = decode_input_data(tx["input"], contract)
+            repayment_chain = decode_input[1]["repaymentChainId"]
             decode_input = decode_input[1]["relayData"]
             gas_used = str(
                 int(tx["gasUsed"]) * int(tx["gasPrice"])
@@ -86,8 +86,8 @@ def update_base():
                   tx_hash, relayer, is_success, gas,
                   aim_chain, time_stamp, block, origin_chain,
                         input_amount, output_amount, deposit_id,
-                        input_token, output_token
-               ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        input_token, output_token, repayment_chain
+               ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
          """,
                 (
                     tx["hash"],
@@ -102,7 +102,8 @@ def update_base():
                     decode_input["outputAmount"],
                     decode_input["depositId"],
                     decode_input["inputToken"],
-                    decode_input["outputToken"]
+                    decode_input["outputToken"],
+                    repayment_chain,
                 ),
             )
 
