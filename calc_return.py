@@ -134,6 +134,46 @@ def calc_return(chain):
             )
             current_bundle_id = bundle_id
             start_block = int(fill[13])
+    data_usdc = calc_bundle(
+        cursor,
+        start_block,
+        9999999999999,
+        current_bundle_id,
+        chain,
+        "usdc",
+        data_usdc,
+        usdc_address
+    )
+    data_weth = calc_bundle(
+        cursor,
+        start_block,
+        9999999999999,
+        current_bundle_id,
+        chain,
+        "weth",
+        data_weth,
+        weth_address,
+    )
+    data_wbtc = calc_bundle(
+        cursor,
+        start_block,
+        9999999999999,
+        current_bundle_id,
+        chain,
+        "wbtc",
+        data_wbtc,
+        wbtc_address,
+    )
+    data_dai = calc_bundle(
+        cursor,
+        start_block,
+        9999999999999,
+        current_bundle_id,
+        chain,
+        "dai",
+        data_dai,
+        dai_address,
+    )
     conn.close()
     # Convert data to DataFrame and write to Excel
     df_usdc = pd.DataFrame(data_usdc)

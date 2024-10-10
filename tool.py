@@ -126,7 +126,7 @@ def update_bundle(chain, start_block):
 
 def get_bundle_id(block, cursor, chain):
     cursor.execute(
-        "SELECT bundle_id FROM Bundle WHERE end_block > ? AND chain = ?",
+        "SELECT bundle_id FROM Bundle WHERE end_block >= ? AND chain = ?",
         (block, chain),
     )
     result = cursor.fetchall()
