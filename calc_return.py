@@ -11,13 +11,14 @@ def calc_bundle(cursor, start_block, end_block, bundle_id, chain, token, data, t
     repay_chain_id = get_chain_id(chain)
     cursor.execute(
         """
-        SELECT input_amount, tx_hash, lp_fee FROM Fill WHERE block >= ? AND block <= ? AND repayment_chain = ? AND is_success = 1 AND output_token = ?
+        SELECT input_amount, tx_hash, lp_fee FROM Fill WHERE block >= ? AND block <= ? AND repayment_chain = ? AND is_success = 1 AND (output_token = ? OR (input_token = ? AND repayment_chain = origin_chain)) 
         """,
         (
             start_block,
             end_block,
             repay_chain_id,
             token_address,
+            token_address
         ),
     )
     fill_amounts = cursor.fetchall()
