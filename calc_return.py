@@ -77,12 +77,15 @@ def calc_return(chain):
     end_block = 0
     usdc_address = "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913"
     weth_address = "0x4200000000000000000000000000000000000006"
+    dai_address = "0x6B175474E89094C44Da98b954EedeAC495271d0F"
+    wbtc_address = "0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599"
     if chain == "arb":
         weth_address = "0x82aF49447D8a07e3bd95BD0d56f35241523fBab1"
+        dai_address = "0xda10009cbd5d07dd0cecc66161fc93d7c9000da1"
     if chain == "eth":
         weth_address = "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2"
-    wbtc_address = "0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599"
-    dai_address = "0x6B175474E89094C44Da98b954EedeAC495271d0F"
+    if chain == "base":
+        dai_address = "0x50c5725949a6f0c72e6c4a641f24049a917db0cb"
     for fill in fill_list:
         bundle_id = get_bundle_id(fill[13], cursor, chain)
         if bundle_id == 0:
