@@ -124,15 +124,20 @@ def update_bundle(chain, start_block):
     update_variable(f"last_{chain}_bundle_id", bundle_id)
 
 
-def get_bundle_id(block, cursor, chain):
+def get_bundle_id(block, cursor, chain, repayment_chain=None):
     cursor.execute(
-        "SELECT bundle_id FROM Bundle WHERE end_block >= ? AND chain = ?",
+        "SELECT bundle_id FROM Bundle WHERE end_block > ? AND chain = ?",
         (block, chain),
     )
     result = cursor.fetchall()
     if not result:
         return 0
-    return result[0][0]
+    bundle_id = result[0][0]
+    if repayment_chain is not None:
+        chian_id = get_chain_id(chain)
+        if str(repayment_chain) != str(chian_id):
+            bundle_id = int(bundle_id) + 1
+    return bundle_id
 
 
 def get_relayer_root(chain, cursor, bundle):

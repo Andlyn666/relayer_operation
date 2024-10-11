@@ -11,7 +11,7 @@ def calc_bundle(cursor, start_block, end_block, bundle_id, chain, token, data, t
     repay_chain_id = get_chain_id(chain)
     cursor.execute(
         """
-        SELECT input_amount, tx_hash, lp_fee FROM Fill WHERE block >= ? AND block <= ? AND repayment_chain = ? AND is_success = 1 AND (output_token = ? OR (input_token = ? AND repayment_chain = origin_chain)) 
+        SELECT input_amount, tx_hash, lp_fee FROM Fill WHERE block >= ? AND block <= ? AND repayment_chain = ? AND is_success = 1 AND ((output_token = ? AND repayment_chain != origin_chain ) OR (input_token = ? AND repayment_chain = origin_chain)) 
         """,
         (
             start_block,
@@ -72,7 +72,8 @@ def calc_return(chain):
     data_weth = []
     data_wbtc = []
     data_dai = []
-    current_bundle_id = get_bundle_id(fill_list[0][13], cursor, chain)
+    aim_chian = fill_list[0][9]
+    current_bundle_id = get_bundle_id(fill_list[0][13], cursor, aim_chian, fill_list[0][17])
     start_block = fill_list[0][13]
     end_block = 0
     usdc_address = "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913"
@@ -87,7 +88,8 @@ def calc_return(chain):
     if chain == "base":
         dai_address = "0x50c5725949A6F0c72E6C4a641F24049A917DB0Cb"
     for fill in fill_list:
-        bundle_id = get_bundle_id(fill[13], cursor, chain)
+        aim_chian = fill[9]
+        bundle_id = get_bundle_id(fill[13], cursor, aim_chian, fill[17])
         if bundle_id == 0:
             continue  # Skip this iteration instead of breaking
         if bundle_id != current_bundle_id:
