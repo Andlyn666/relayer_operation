@@ -3,6 +3,13 @@ from web3 import Web3
 import json
 import sqlite3
 import requests
+import base64
+import time
+import urllib
+import hashlib
+import hmac
+from binance.spot import Spot as Client
+from dotenv import load_dotenv
 
 def get_variable(name):
     conn = sqlite3.connect("mydatabase.db")
@@ -285,7 +292,7 @@ def update_deposit_time():
                     "UPDATE Fill SET deposit_time = ?, lp_fee = ? WHERE tx_hash = ? AND aim_chain = ?",
                     (event["args"]["quoteTimestamp"], lp_fee, row[3], row[2]),
                 )
-                break;
+                break
     
     conn.commit()
     conn.close()
@@ -300,3 +307,66 @@ def get_token_price(token, currency="usd"):
 
 def round_decimal(value, decimal=3):
     return round(value, decimal)
+
+def get_cex_fee(token, start_time, end_time):
+    if token == 'dai':
+        api_domain = "https://api.kraken.com"
+        api_method = "WithdrawStatus"
+        api_data = f"asset={token}&start={start_time}&end={end_time}"
+        api_path = "/0/private/"
+        api_key = os.getenv("KRAKEN_API_KEY")
+        api_secret = base64.b64decode(os.getenv("KRAKEN_API_SECRET"))
+        api_nonce = str(int(time.time() * 1000))
+        api_postdata = api_data + "&nonce=" + api_nonce
+        api_postdata = api_postdata.encode("utf-8")
+        api_sha256 = hashlib.sha256(api_nonce.encode("utf-8") + api_postdata).digest()
+        api_hmacsha512 = hmac.new(
+            api_secret,
+            api_path.encode("utf-8") + api_method.encode("utf-8") + api_sha256,
+            hashlib.sha512,
+        )
+        api_request = urllib.request.Request(
+            api_domain + api_path + api_method, api_postdata
+        )
+        api_request.add_header("API-Key", api_key)
+        api_request.add_header("API-Sign", base64.b64encode(api_hmacsha512.digest()))
+        api_request.add_header("User-Agent", "Kraken REST API")
+        try:
+            api_reply = urllib.request.urlopen(api_request).read()
+        except Exception as error:
+            print("API call failed")
+            return None
+        try:
+            api_reply = api_reply.decode()
+        except Exception as error:
+            print("API reply decode failed")
+            return None
+        result = json.loads(api_reply)['result']
+        # sum all the fee of the result
+        fee = 0
+        for tx in result:
+            fee += float(tx['fee'])
+        return fee
+    if token == 'weth':
+        api_key = os.getenv("BINANCE_API_KEY")
+        api_secret = os.getenv("BINANCE_API_SECRET")
+        client = Client(api_key, api_secret)
+        start_timestamp = int(start_time * 1000)
+        end_timestamp = int(end_time * 1000)
+        his_withdraw = client.withdraw_history(startTime=start_timestamp, endTime=end_timestamp, status='6', coin='ETH')
+        fee = 0
+        for tx in his_withdraw:
+            fee += float(tx['transactionFee'])
+        
+        return fee
+    
+def main():
+    load_dotenv()
+    # get current timestamp
+    timestamp = int(time.time())
+    # get timestamp 1 day ago
+    timestamp_yesterday = timestamp - 86400 * 20
+    get_cex_fee('weth', timestamp_yesterday, timestamp)
+
+if __name__ == "__main__":
+    main()

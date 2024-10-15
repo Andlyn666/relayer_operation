@@ -3,7 +3,7 @@ import time
 from decimal import Decimal
 from datetime import datetime
 import pandas as pd
-from tool import get_token_price, round_decimal
+from tool import get_token_price, round_decimal, get_cex_fee
 
 
 #calc total profit of each token in sum of each day
@@ -123,13 +123,13 @@ def calc_daily_count(cursor, output_token, token_name, chain):
         if token_name == "dai":
             total_output_amount = Decimal(total_output_amount / 1000000000000000000)
             total_input_amount = Decimal(total_input_amount / 1000000000000000000)
-            total_lp_fee = 0
+            total_lp_fee = Decimal(get_cex_fee('dai', time_stamp - 86400, time_stamp))
+            lp_usd = Decimal(total_lp_fee) * dai_price
 
             total_gas_amount = Decimal(total_gas_amount) * eth_price
             profit = total_input_amount - total_output_amount - total_gas_amount - total_lp_fee
-            
+
             profit_usd = Decimal(profit) * dai_price
-            lp_usd = 0
             gas_usd = Decimal(total_gas_amount) * dai_price
 
         if token_name == "weth":
@@ -183,6 +183,25 @@ def calc_total_profit(cursor):
     data = calc_total_amount(cursor, "0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599","wbtc", "eth", data)
     data = calc_total_amount(cursor, "0x6B175474E89094C44Da98b954EedeAC495271d0F","dai", "eth", data)
     data = calc_total_amount(cursor, "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2","weth", "eth", data)
+
+    # Initialize sums for each column
+    total_profit_usd = 0
+    total_lp_usd = 0
+    total_gas_usd = 0
+
+    # Calculate sums for each column
+    for row in data:
+        total_profit_usd += row[1]
+        total_lp_usd += row[2]
+        total_gas_usd += row[3]
+
+    # Add the totals row to the data
+    data.append(["Total", total_profit_usd, total_lp_usd, total_gas_usd])
+
+    # Optionally, calculate and print the grand total
+    grand_total = total_profit_usd + total_lp_usd + total_gas_usd
+    print(f"Grand Total USD: {grand_total}")
+
     df = pd.DataFrame(data, columns=["Token", "Profit(USD)", "Total LP Fee(USD)", "Total Gas Fee(USD)"])
     with pd.ExcelWriter('daily_count.xlsx', mode='a', engine='openpyxl', if_sheet_exists='replace') as writer:
         df.to_excel(writer, sheet_name=f'total_profit', index=False)
