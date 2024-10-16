@@ -10,6 +10,7 @@ import hashlib
 import hmac
 from binance.spot import Spot as Client
 from dotenv import load_dotenv
+from datetime import datetime
 
 def get_variable(name):
     conn = sqlite3.connect("mydatabase.db")
@@ -273,8 +274,12 @@ def update_deposit_time():
     # get all deposit_id from the fill table
     conn = sqlite3.connect("mydatabase.db")
     cursor = conn.cursor()
-    dai_address = "0x6B175474E89094C44Da98b954EedeAC495271d0F"
-    cursor.execute("SELECT deposit_id, origin_chain, aim_chain, tx_hash, input_token, output_token, input_amount FROM Fill WHERE is_success = 1 AND deposit_time is NULL AND output_token != ?",(dai_address,) )
+    cursor.execute('''
+    UPDATE Fill
+    SET lp_fee = 0
+    WHERE repayment_chain = origin_chain
+    ''')
+    cursor.execute("SELECT deposit_id, origin_chain, aim_chain, tx_hash, input_token, output_token, input_amount FROM Fill WHERE is_success = 1 AND deposit_time is NULL AND repayment_chain != origin_chain")
     result = cursor.fetchall()
     # put deposit_id into array
     deposit_id_list = []
@@ -308,7 +313,7 @@ def get_token_price(token, currency="usd"):
 def round_decimal(value, decimal=3):
     return round(value, decimal)
 
-def get_cex_fee(token, start_time, end_time):
+def get_cex_fee_results(token, start_time, end_time):
     if token == 'dai':
         api_domain = "https://api.kraken.com"
         api_method = "WithdrawStatus"
@@ -341,12 +346,12 @@ def get_cex_fee(token, start_time, end_time):
         except Exception as error:
             print("API reply decode failed")
             return None
-        result = json.loads(api_reply)['result']
-        # sum all the fee of the result
-        fee = 0
-        for tx in result:
-            fee += float(tx['fee'])
-        return fee
+        result = json.loads(api_reply)
+        if result.keys() != {"error", "result"}:
+            print(result)
+            return 0
+        result = result['result']
+        return result
     if token == 'weth':
         api_key = os.getenv("BINANCE_API_KEY")
         api_secret = os.getenv("BINANCE_API_SECRET")
@@ -354,19 +359,65 @@ def get_cex_fee(token, start_time, end_time):
         start_timestamp = int(start_time * 1000)
         end_timestamp = int(end_time * 1000)
         his_withdraw = client.withdraw_history(startTime=start_timestamp, endTime=end_timestamp, status='6', coin='ETH')
-        fee = 0
-        for tx in his_withdraw:
-            fee += float(tx['transactionFee'])
         
-        return fee
+        return his_withdraw
     
+def convert_to_timestamp(time_str):
+    dt = datetime.strptime(time_str, '%Y-%m-%d %H:%M:%S')
+    return int(dt.timestamp())
+
+# fetch the fee by the get_cex_fee_results function and insert the result into the CEX_FEE table
+def update_cex_fee():
+    timestamp = int(time.time())
+    # get the last cex fee time stamp from the Variable table
+    last_cex_fee_time_stamp = get_variable("last_cex_fee_time_stamp_binance")
+    # get the cex fee by the get_cex_fee_results function
+    if last_cex_fee_time_stamp == 1:
+        last_cex_fee_time_stamp = timestamp - 86400 * 60
+    cex_fee_binance = get_cex_fee_results('weth', last_cex_fee_time_stamp, timestamp)
+    # insert the cex fee into the CEX_FEE table
+    conn = sqlite3.connect("mydatabase.db")
+    cursor = conn.cursor()
+    for tx in cex_fee_binance:
+        cursor.execute("INSERT INTO CEX_FEE (token, chain, fee, time_stamp) VALUES (?, ?, ?, ?)", ('weth', 'eth', tx['transactionFee'], convert_to_timestamp(tx['completeTime'])))
+    conn.commit()
+    conn.close()
+    update_variable("last_cex_fee_time_stamp_binance", timestamp)
+
+    last_cex_fee_time_stamp = get_variable("last_cex_fee_time_stamp_kraken")
+    if last_cex_fee_time_stamp == 1:
+        last_cex_fee_time_stamp = timestamp - 86400 * 60
+    cex_fee_kraken = get_cex_fee_results('dai', last_cex_fee_time_stamp, timestamp)
+    #insert the cex fee into the CEX_FEE table
+    conn = sqlite3.connect("mydatabase.db")
+    cursor = conn.cursor()
+    for tx in cex_fee_kraken:
+        cursor.execute("INSERT INTO CEX_FEE (token, chain, fee, time_stamp) VALUES (?, ?, ?, ?)", ('dai', 'eth', tx['fee'], tx['time']))
+    conn.commit()
+    conn.close()
+    update_variable("last_cex_fee_time_stamp_kraken", timestamp)
+
+# get sum of the fee from the CEX_FEE table
+def get_cex_fee(token, start_time, end_time):
+    conn = sqlite3.connect("mydatabase.db")
+    cursor = conn.cursor()
+    cursor.execute("SELECT SUM(fee) FROM CEX_FEE WHERE token = ? AND time_stamp >= ? AND time_stamp <= ?", (token, start_time, end_time))
+    result = cursor.fetchone()
+    conn.close()
+    ret = result[0] if result else 0
+    if ret is None:
+        ret = 0
+    return ret
+
 def main():
     load_dotenv()
     # get current timestamp
     timestamp = int(time.time())
     # get timestamp 1 day ago
     timestamp_yesterday = timestamp - 86400 * 20
-    get_cex_fee('weth', timestamp_yesterday, timestamp)
+    #get_cex_fee_results('weth', timestamp_yesterday, timestamp)
+    update_cex_fee()
+    print(get_cex_fee('dai', timestamp_yesterday, timestamp))
 
 if __name__ == "__main__":
     main()

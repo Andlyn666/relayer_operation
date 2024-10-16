@@ -5,11 +5,10 @@ conn = sqlite3.connect('mydatabase.db')
 
 # Create a cursor object
 cursor = conn.cursor()
-
-cursor.execute('DROP TABLE IF EXISTS Fill')
-cursor.execute('DROP TABLE IF EXISTS Return')
-cursor.execute('DROP TABLE IF EXISTS Variable')
-cursor.execute('DROP TABLE IF EXISTS Bundle')
+# cursor.execute('DROP TABLE IF EXISTS Fill')
+# cursor.execute('DROP TABLE IF EXISTS Return')
+# cursor.execute('DROP TABLE IF EXISTS Variable')
+# cursor.execute('DROP TABLE IF EXISTS Bundle')
 
 # Create Fill table
 cursor.execute('''
@@ -65,6 +64,17 @@ CREATE TABLE IF NOT EXISTS Bundle (
     chain TEXT,
     end_block INTEGER,
     PRIMARY KEY (bundle_id, chain)
+)
+''')
+
+# Create CEX_FEE table
+cursor.execute('''
+CREATE TABLE IF NOT EXISTS CEX_FEE (
+    token TEXT,
+    chain TEXT,
+    fee TEXT,
+    time_stamp TEXT,
+    PRIMARY KEY (token, chain, time_stamp)
 )
 ''')
 
