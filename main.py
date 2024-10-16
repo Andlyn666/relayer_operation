@@ -1,5 +1,5 @@
 from calc_daily import calc_daily
-from tool import update_bundle, create_w3_contract, update_deposit_time
+from tool import update_bundle, create_w3_contract, update_deposit_time, update_cex_fee
 from calc_return import calc_return
 from dotenv import load_dotenv
 from base import update_base
@@ -24,6 +24,8 @@ def main():
     update_bundle("op", 123939334)
     update_bundle("arb", 247363892)
     update_bundle('eth', 19008104)
+
+    update_cex_fee()
     
     calc_return("base")
     calc_return("op")
