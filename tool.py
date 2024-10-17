@@ -374,12 +374,17 @@ def update_cex_fee():
     # get the cex fee by the get_cex_fee_results function
     if last_cex_fee_time_stamp == 1:
         last_cex_fee_time_stamp = timestamp - 86400 * 60
-    cex_fee_binance = get_cex_fee_results('weth', last_cex_fee_time_stamp, timestamp)
+    cex_fee_binance = []
+    if timestamp - int(last_cex_fee_time_stamp) > 86400:
+        cex_fee_binance = get_cex_fee_results('weth', last_cex_fee_time_stamp, timestamp)
     # insert the cex fee into the CEX_FEE table
     conn = sqlite3.connect("mydatabase.db")
     cursor = conn.cursor()
     for tx in cex_fee_binance:
-        cursor.execute("INSERT INTO CEX_FEE (token, chain, fee, time_stamp) VALUES (?, ?, ?, ?)", ('weth', 'eth', tx['transactionFee'], convert_to_timestamp(tx['completeTime'])))
+        cursor.execute("""
+            INSERT OR IGNORE INTO CEX_FEE (token, chain, fee, time_stamp) 
+            VALUES (?, ?, ?, ?)
+        """, ('weth', 'eth', tx['transactionFee'], convert_to_timestamp(tx['completeTime'])))
     conn.commit()
     conn.close()
     update_variable("last_cex_fee_time_stamp_binance", timestamp)
@@ -392,7 +397,7 @@ def update_cex_fee():
     conn = sqlite3.connect("mydatabase.db")
     cursor = conn.cursor()
     for tx in cex_fee_kraken:
-        cursor.execute("INSERT INTO CEX_FEE (token, chain, fee, time_stamp) VALUES (?, ?, ?, ?)", ('dai', 'eth', tx['fee'], tx['time']))
+        cursor.execute("INSERT OR IGNORE INTO CEX_FEE (token, chain, fee, time_stamp) VALUES (?, ?, ?, ?)", ('dai', 'eth', tx['fee'], tx['time']))
     conn.commit()
     conn.close()
     update_variable("last_cex_fee_time_stamp_kraken", timestamp)
@@ -417,7 +422,7 @@ def main():
     timestamp_yesterday = timestamp - 86400 * 20
     #get_cex_fee_results('weth', timestamp_yesterday, timestamp)
     update_cex_fee()
-    print(get_cex_fee('dai', timestamp_yesterday, timestamp))
+    print(get_cex_fee('weth', timestamp_yesterday, timestamp))
 
 if __name__ == "__main__":
     main()

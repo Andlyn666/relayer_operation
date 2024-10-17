@@ -67,12 +67,12 @@ def calc_total_amount(cursor, output_token, token_name, chain, data):
         total_output_amount = Decimal(total_output_amount / 1000000000000000000)
         total_input_amount = Decimal(total_input_amount / 1000000000000000000)
         total_lp_fee = Decimal(get_cex_fee('dai', 0, time.time()))
-
         total_gas_amount = Decimal(total_gas_amount) * eth_price
         profit = total_input_amount - total_output_amount - total_gas_amount - total_lp_fee
         
         profit_usd = Decimal(profit) * dai_price
         gas_usd = Decimal(total_gas_amount) * dai_price
+        lp_usd = Decimal(total_lp_fee) * dai_price
 
     profit_usd = round_decimal(profit_usd)
     lp_usd = round_decimal(lp_usd)

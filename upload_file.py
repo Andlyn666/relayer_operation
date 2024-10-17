@@ -39,7 +39,7 @@ def upload_to_gdrive(file_name, folder_id=None):
     # Make the file public
     permission = {
         'type': 'anyone',
-        'role': 'reader',
+        'role': 'writer',
     }
     service.permissions().create(fileId=file_id, body=permission).execute()
 
