@@ -353,14 +353,20 @@ def get_cex_fee_results(token, start_time, end_time):
         result = result['result']
         return result
     if token == 'weth':
-        api_key = os.getenv("BINANCE_API_KEY")
-        api_secret = os.getenv("BINANCE_API_SECRET")
-        client = Client(api_key, api_secret)
-        start_timestamp = int(start_time * 1000)
-        end_timestamp = int(end_time * 1000)
-        his_withdraw = client.withdraw_history(startTime=start_timestamp, endTime=end_timestamp, status='6', coin='ETH')
-        
-        return his_withdraw
+        try:
+            his_withdraw = []
+            api_key = os.getenv("BINANCE_API_KEY")
+            api_secret = os.getenv("BINANCE_API_SECRET")
+            client = Client(api_key, api_secret)
+            start_timestamp = int(start_time * 1000)
+            end_timestamp = int(end_time * 1000)
+            his_withdraw = client.withdraw_history(startTime=start_timestamp, endTime=end_timestamp, status='6', coin='ETH')
+            return his_withdraw
+
+        except Exception as e:
+            print(f"Binance API exception occurred: {e}")
+            print(f"start_time: {start_time}, end_time: {end_time}")
+            return []
     
 def convert_to_timestamp(time_str):
     dt = datetime.strptime(time_str, '%Y-%m-%d %H:%M:%S')
