@@ -71,14 +71,17 @@ def update_bundle(chain, start_block):
                         cursor.execute(
                             """
                             INSERT INTO Bundle (
-                            chain, bundle_id, end_block, refund_root
-                            ) VALUES (?, ?, ?, ?) 
+                            chain, bundle_id, refund_root, base_end_block, op_end_block, arb_end_block, eth_end_block
+                            ) VALUES (?, ?, ?, ?, ?, ?, ?) 
                             """,
                             (
                                 chain,
                                 bundle_id,
-                                bundle_numbers[6],
                                 event["args"]["relayerRefundRoot"],
+                                bundle_numbers[6],
+                                bundle_numbers[1],
+                                bundle_numbers[4],
+                                bundle_numbers[0],
                             ),
                         )
                 if chain == "op" and len(bundle_numbers) >= 2:
@@ -86,14 +89,17 @@ def update_bundle(chain, start_block):
                         cursor.execute(
                             """
                             INSERT INTO Bundle (
-                            chain, bundle_id, end_block, refund_root
-                            ) VALUES (?, ?, ?, ?) 
+                            chain, bundle_id, refund_root, base_end_block, op_end_block, arb_end_block, eth_end_block
+                            ) VALUES (?, ?, ?, ?, ?, ?, ?) 
                             """,
                             (
                                 chain,
                                 bundle_id,
-                                bundle_numbers[1],
                                 event["args"]["relayerRefundRoot"],
+                                bundle_numbers[6],
+                                bundle_numbers[1],
+                                bundle_numbers[4],
+                                bundle_numbers[0],
                             ),
                         )
                 if chain == "arb" and len(bundle_numbers) >= 5:
@@ -101,14 +107,17 @@ def update_bundle(chain, start_block):
                         cursor.execute(
                             """
                             INSERT INTO Bundle (
-                            chain, bundle_id, end_block, refund_root
-                            ) VALUES (?, ?, ?, ?) 
+                            chain, bundle_id, refund_root, base_end_block, op_end_block, arb_end_block, eth_end_block
+                            ) VALUES (?, ?, ?, ?, ?, ?, ?) 
                             """,
                             (
                                 chain,
                                 bundle_id,
-                                bundle_numbers[4],
                                 event["args"]["relayerRefundRoot"],
+                                bundle_numbers[6],
+                                bundle_numbers[1],
+                                bundle_numbers[4],
+                                bundle_numbers[0],
                             ),
                         )
                 if chain == "eth" and len(bundle_numbers) >= 1:
@@ -116,14 +125,17 @@ def update_bundle(chain, start_block):
                         cursor.execute(
                             """
                             INSERT INTO Bundle (
-                            chain, bundle_id, end_block, refund_root
-                            ) VALUES (?, ?, ?, ?) 
+                            chain, bundle_id, refund_root, base_end_block, op_end_block, arb_end_block, eth_end_block
+                            ) VALUES (?, ?, ?, ?, ?, ?, ?) 
                             """,
                             (
                                 chain,
                                 bundle_id,
-                                bundle_numbers[0],
                                 event["args"]["relayerRefundRoot"],
+                                bundle_numbers[6],
+                                bundle_numbers[1],
+                                bundle_numbers[4],
+                                bundle_numbers[0],
                             ),
                         )
                 break
@@ -132,19 +144,17 @@ def update_bundle(chain, start_block):
     update_variable(f"last_{chain}_bundle_id", bundle_id)
 
 
-def get_bundle_id(block, cursor, chain, repayment_chain=None):
+def get_bundle_id(block, cursor, aim_chain, repayment_chain):
+
+    repayment_chain_name = get_chain_name(int(repayment_chain))
     cursor.execute(
-        "SELECT bundle_id FROM Bundle WHERE end_block > ? AND chain = ?",
-        (block, chain),
+        f"SELECT bundle_id FROM Bundle WHERE {aim_chain}_end_block > ? AND chain = ?",
+        (block, repayment_chain_name),
     )
     result = cursor.fetchall()
     if not result:
         return 0
-    bundle_id = result[0][0]
-    if repayment_chain is not None:
-        chian_id = get_chain_id(chain)
-        if str(repayment_chain) != str(chian_id):
-            bundle_id = int(bundle_id) + 1
+    bundle_id = int(result[0][0])
     return bundle_id
 
 
@@ -219,7 +229,7 @@ def get_deposit_time(deposit_id_array):
 
 def get_block_by_bundle_id(bundle_id, chain, cursor):
     cursor.execute(
-        "SELECT end_block FROM Bundle WHERE bundle_id = ? AND chain = ?",
+        f"SELECT {chain}_end_block FROM Bundle WHERE bundle_id = ? AND chain = ?",
         (bundle_id, chain),
     )
     result = cursor.fetchall()
@@ -269,6 +279,16 @@ def get_chain_id(chain):
         return 8453
     if chain == "arb":
         return 42161
+
+def get_chain_name(chain_id):
+    if chain_id == 1:
+        return "eth"
+    if chain_id == 10:
+        return "op"
+    if chain_id == 8453:
+        return "base"
+    if chain_id == 42161:
+        return "arb"
 
 def update_deposit_time():
     # get all deposit_id from the fill table

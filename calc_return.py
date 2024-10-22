@@ -6,16 +6,16 @@ import pandas as pd
 import os
 
 
-def calc_bundle(cursor, start_block, end_block, bundle_id, chain, token, data, token_address):
+def calc_bundle(cursor, start_time, end_time, bundle_id, chain, token, data, token_address):
     # get the sum of the output amount of Fill from start_block to end_block
     repay_chain_id = get_chain_id(chain)
     cursor.execute(
         """
-        SELECT input_amount, tx_hash, lp_fee FROM Fill WHERE block >= ? AND block <= ? AND repayment_chain = ? AND is_success = 1 AND ((output_token = ? AND repayment_chain != origin_chain ) OR (input_token = ? AND repayment_chain = origin_chain)) 
+        SELECT input_amount, tx_hash, lp_fee FROM Fill WHERE time_stamp >= ? AND time_stamp <= ? AND repayment_chain = ? AND is_success = 1 AND ((output_token = ? AND repayment_chain != origin_chain ) OR (input_token = ? AND repayment_chain = origin_chain)) 
         """,
         (
-            start_block,
-            end_block,
+            start_time,
+            end_time,
             repay_chain_id,
             token_address,
             token_address
@@ -49,8 +49,8 @@ def calc_bundle(cursor, start_block, end_block, bundle_id, chain, token, data, t
             "return_amount": total_return_amount,
             "lp_fee": total_lp_fee,
             "return + lp": total_return_amount + total_lp_fee,
-            "start_block": start_block,
-            "end_block": end_block,
+            "start_time": start_time,
+            "end_time": end_time,
             "tx_hashs": tx_hashs,
             "relayer_root": relayer_root,
         }
@@ -63,7 +63,9 @@ def calc_return(chain):
     repayment_chain_id = get_chain_id(chain)
     fill_list = cursor.execute(
         """
-        SELECT * FROM Fill WHERE repayment_chain = ? AND is_return is NULL AND is_success = 1 ORDER BY block ASC
+        SELECT * FROM Fill 
+        WHERE repayment_chain = ? AND is_return is NULL AND is_success = 1 
+        ORDER BY CAST(time_stamp AS INTEGER) ASC
         """,
         (repayment_chain_id,),
     ).fetchall()
@@ -74,8 +76,8 @@ def calc_return(chain):
     data_dai = []
     aim_chian = fill_list[0][9]
     current_bundle_id = get_bundle_id(fill_list[0][13], cursor, aim_chian, fill_list[0][17])
-    start_block = fill_list[0][13]
-    end_block = 0
+    start_time = fill_list[0][12]
+    end_time = 0
     usdc_address = "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913"
     weth_address = "0x4200000000000000000000000000000000000006"
     dai_address = "0x6B175474E89094C44Da98b954EedeAC495271d0F"
@@ -91,13 +93,13 @@ def calc_return(chain):
         aim_chian = fill[9]
         bundle_id = get_bundle_id(fill[13], cursor, aim_chian, fill[17])
         if bundle_id == 0:
-            continue  # Skip this iteration instead of breaking
+            continue
         if bundle_id != current_bundle_id:
-            end_block = int(fill[13]) - 1
+            end_time = int(fill[12]) - 1
             data_usdc = calc_bundle(
                 cursor,
-                start_block,
-                end_block,
+                start_time,
+                end_time,
                 current_bundle_id,
                 chain,
                 "usdc",
@@ -106,8 +108,8 @@ def calc_return(chain):
             )
             data_weth = calc_bundle(
                 cursor,
-                start_block,
-                end_block,
+                start_time,
+                end_time,
                 current_bundle_id,
                 chain,
                 "weth",
@@ -116,8 +118,8 @@ def calc_return(chain):
             )
             data_wbtc = calc_bundle(
                 cursor,
-                start_block,
-                end_block,
+                start_time,
+                end_time,
                 current_bundle_id,
                 chain,
                 "wbtc",
@@ -126,8 +128,8 @@ def calc_return(chain):
             )
             data_dai = calc_bundle(
                 cursor,
-                start_block,
-                end_block,
+                start_time,
+                end_time,
                 current_bundle_id,
                 chain,
                 "dai",
@@ -135,47 +137,8 @@ def calc_return(chain):
                 dai_address,
             )
             current_bundle_id = bundle_id
-            start_block = int(fill[13])
-    data_usdc = calc_bundle(
-        cursor,
-        start_block,
-        9999999999999,
-        current_bundle_id,
-        chain,
-        "usdc",
-        data_usdc,
-        usdc_address
-    )
-    data_weth = calc_bundle(
-        cursor,
-        start_block,
-        9999999999999,
-        current_bundle_id,
-        chain,
-        "weth",
-        data_weth,
-        weth_address,
-    )
-    data_wbtc = calc_bundle(
-        cursor,
-        start_block,
-        9999999999999,
-        current_bundle_id,
-        chain,
-        "wbtc",
-        data_wbtc,
-        wbtc_address,
-    )
-    data_dai = calc_bundle(
-        cursor,
-        start_block,
-        9999999999999,
-        current_bundle_id,
-        chain,
-        "dai",
-        data_dai,
-        dai_address,
-    )
+            start_time = int(fill[12])
+    
     conn.close()
     # Convert data to DataFrame and write to Excel
     df_usdc = pd.DataFrame(data_usdc)

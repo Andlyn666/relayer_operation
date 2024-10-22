@@ -8,7 +8,7 @@ cursor = conn.cursor()
 # cursor.execute('DROP TABLE IF EXISTS Fill')
 # cursor.execute('DROP TABLE IF EXISTS Return')
 # cursor.execute('DROP TABLE IF EXISTS Variable')
-# cursor.execute('DROP TABLE IF EXISTS Bundle')
+cursor.execute('DROP TABLE IF EXISTS Bundle')
 
 # Create Fill table
 cursor.execute('''
@@ -62,7 +62,10 @@ CREATE TABLE IF NOT EXISTS Bundle (
     bundle_id TEXT,
     refund_root TEXT,
     chain TEXT,
-    end_block INTEGER,
+    base_end_block INTEGER,
+    op_end_block INTEGER,
+    arb_end_block INTEGER,
+    eth_end_block INTEGER,
     PRIMARY KEY (bundle_id, chain)
 )
 ''')
