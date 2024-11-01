@@ -333,11 +333,11 @@ def get_token_price(token, currency="usd"):
 def round_decimal(value, decimal=3):
     return round(value, decimal)
 
-def get_cex_fee_results(token, start_time, end_time):
-    if token == 'dai':
+def get_cex_fee_results(cex, start_time, end_time):
+    if cex == 'kraken':
         api_domain = "https://api.kraken.com"
         api_method = "WithdrawStatus"
-        api_data = f"asset={token}&start={start_time}&end={end_time}"
+        api_data = f"start={start_time}&end={end_time}"
         api_path = "/0/private/"
         api_key = os.getenv("KRAKEN_API_KEY")
         api_secret = base64.b64decode(os.getenv("KRAKEN_API_SECRET"))
@@ -372,7 +372,7 @@ def get_cex_fee_results(token, start_time, end_time):
             return 0
         result = result['result']
         return result
-    if token == 'weth':
+    if cex == 'binance':
         try:
             his_withdraw = []
             api_key = os.getenv("BINANCE_API_KEY")
@@ -380,7 +380,7 @@ def get_cex_fee_results(token, start_time, end_time):
             client = Client(api_key, api_secret)
             start_timestamp = int(start_time * 1000)
             end_timestamp = int(end_time * 1000)
-            his_withdraw = client.withdraw_history(startTime=start_timestamp, endTime=end_timestamp, status='6', coin='ETH')
+            his_withdraw = client.withdraw_history(startTime=start_timestamp, endTime=end_timestamp, status='6')
             return his_withdraw
 
         except Exception as e:
@@ -402,7 +402,7 @@ def update_cex_fee():
         last_cex_fee_time_stamp = timestamp - 86400 * 60
     cex_fee_binance = []
     if timestamp - int(last_cex_fee_time_stamp) > 86400:
-        cex_fee_binance = get_cex_fee_results('weth', last_cex_fee_time_stamp, timestamp)
+        cex_fee_binance = get_cex_fee_results('binance', last_cex_fee_time_stamp, timestamp)
     # insert the cex fee into the CEX_FEE table
     conn = sqlite3.connect("mydatabase.db")
     cursor = conn.cursor()
@@ -410,20 +410,21 @@ def update_cex_fee():
         cursor.execute("""
             INSERT OR IGNORE INTO CEX_FEE (token, chain, fee, time_stamp) 
             VALUES (?, ?, ?, ?)
-        """, ('weth', 'eth', tx['transactionFee'], convert_to_timestamp(tx['completeTime'])))
+        """, (tx['coin'].lower(), tx['network'], tx['transactionFee'], convert_to_timestamp(tx['completeTime'])))
     conn.commit()
     conn.close()
     update_variable("last_cex_fee_time_stamp_binance", timestamp)
 
     last_cex_fee_time_stamp = get_variable("last_cex_fee_time_stamp_kraken")
+
     if last_cex_fee_time_stamp == 1:
         last_cex_fee_time_stamp = timestamp - 86400 * 60
-    cex_fee_kraken = get_cex_fee_results('dai', last_cex_fee_time_stamp, timestamp)
+    cex_fee_kraken = get_cex_fee_results('kraken', last_cex_fee_time_stamp, timestamp)
     #insert the cex fee into the CEX_FEE table
     conn = sqlite3.connect("mydatabase.db")
     cursor = conn.cursor()
     for tx in cex_fee_kraken:
-        cursor.execute("INSERT OR IGNORE INTO CEX_FEE (token, chain, fee, time_stamp) VALUES (?, ?, ?, ?)", ('dai', 'eth', tx['fee'], tx['time']))
+        cursor.execute("INSERT OR IGNORE INTO CEX_FEE (token, chain, fee, time_stamp) VALUES (?, ?, ?, ?)", (tx['asset'].lower(), tx['network'], tx['fee'], tx['time']))
     conn.commit()
     conn.close()
     update_variable("last_cex_fee_time_stamp_kraken", timestamp)

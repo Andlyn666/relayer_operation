@@ -74,6 +74,7 @@ def calc_return(chain):
     data_weth = []
     data_wbtc = []
     data_dai = []
+    data_usdt = []
     aim_chian = fill_list[0][9]
     current_bundle_id = get_bundle_id(fill_list[0][13], cursor, aim_chian, fill_list[0][17])
     start_time = fill_list[0][12]
@@ -82,13 +83,16 @@ def calc_return(chain):
     weth_address = "0x4200000000000000000000000000000000000006"
     dai_address = "0x6B175474E89094C44Da98b954EedeAC495271d0F"
     wbtc_address = "0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599"
+    usdt_address = "0xFd086bC7CD5C481DCC9C85ebE478A1C0b69FCbb9"
     if chain == "arb":
         weth_address = "0x82aF49447D8a07e3bd95BD0d56f35241523fBab1"
         dai_address = "0xDA10009cBd5D07dd0CeCc66161FC93D7c9000da1"
+        usdc_address = "0xaf88d065e77c8cC2239327C5EDb3A432268e5831"
     if chain == "eth":
         weth_address = "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2"
     if chain == "base":
         dai_address = "0x50c5725949A6F0c72E6C4a641F24049A917DB0Cb"
+        usdc_address = "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913"
     for fill in fill_list:
         aim_chian = fill[9]
         bundle_id = get_bundle_id(fill[13], cursor, aim_chian, fill[17])
@@ -136,6 +140,16 @@ def calc_return(chain):
                 data_dai,
                 dai_address,
             )
+            data_usdt = calc_bundle(
+                cursor,
+                start_time,
+                end_time,
+                current_bundle_id,
+                chain,
+                "usdt",
+                data_usdt,
+                usdt_address,
+            )
             current_bundle_id = bundle_id
             start_time = int(fill[12])
     
@@ -146,6 +160,7 @@ def calc_return(chain):
     df_weth = pd.DataFrame(data_weth)
     df_wbtc = pd.DataFrame(data_wbtc)
     df_dai = pd.DataFrame(data_dai)
+    df_usdt = pd.DataFrame(data_usdt)
     # Define the file name
     file_name = "return_data.xlsx"
 
@@ -158,4 +173,6 @@ def calc_return(chain):
             df_wbtc.to_excel(writer, sheet_name=f"{chain}-WBTC", index=False)
         if len(data_dai) > 0:
             df_dai.to_excel(writer, sheet_name=f"{chain}-DAI", index=False)
+        if len(data_usdt) > 0:
+            df_usdt.to_excel(writer, sheet_name=f"{chain}-USDT", index=False)
     return

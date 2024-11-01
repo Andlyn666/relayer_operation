@@ -8,7 +8,8 @@ cursor = conn.cursor()
 # cursor.execute('DROP TABLE IF EXISTS Fill')
 # cursor.execute('DROP TABLE IF EXISTS Return')
 # cursor.execute('DROP TABLE IF EXISTS Variable')
-cursor.execute('DROP TABLE IF EXISTS Bundle')
+# cursor.execute('DROP TABLE IF EXISTS Bundle')
+cursor.execute('DROP TABLE IF EXISTS CEX_FEE')
 
 # Create Fill table
 cursor.execute('''
