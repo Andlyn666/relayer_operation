@@ -448,8 +448,8 @@ def main():
     # get timestamp 1 day ago
     timestamp_yesterday = timestamp - 86400 * 20
     #get_cex_fee_results('weth', timestamp_yesterday, timestamp)
+    update_variable("last_cex_fee_time_stamp_binance", timestamp_yesterday)
     update_cex_fee()
-    print(get_cex_fee('weth', timestamp_yesterday, timestamp))
 
 if __name__ == "__main__":
     main()
