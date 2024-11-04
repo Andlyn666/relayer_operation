@@ -396,7 +396,7 @@ def convert_to_timestamp(time_str):
 def update_cex_fee():
     timestamp = int(time.time())
     # get the last cex fee time stamp from the Variable table
-    last_cex_fee_time_stamp = get_variable("last_cex_fee_time_stamp_binance")
+    last_cex_fee_time_stamp = int(get_variable("last_cex_fee_time_stamp_binance"))
     # get the cex fee by the get_cex_fee_results function
     if last_cex_fee_time_stamp == 1:
         last_cex_fee_time_stamp = timestamp - 86400 * 60
@@ -446,7 +446,7 @@ def main():
     # get current timestamp
     timestamp = int(time.time())
     # get timestamp 1 day ago
-    timestamp_yesterday = timestamp - 86400 * 20
+    timestamp_yesterday = timestamp - 86400 * 60
     #get_cex_fee_results('weth', timestamp_yesterday, timestamp)
     update_variable("last_cex_fee_time_stamp_binance", timestamp_yesterday)
     update_cex_fee()
