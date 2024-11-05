@@ -9,7 +9,7 @@ cursor = conn.cursor()
 # cursor.execute('DROP TABLE IF EXISTS Return')
 # cursor.execute('DROP TABLE IF EXISTS Variable')
 # cursor.execute('DROP TABLE IF EXISTS Bundle')
-cursor.execute('DROP TABLE IF EXISTS CEX_FEE')
+# cursor.execute('DROP TABLE IF EXISTS CEX_FEE')
 
 # Create Fill table
 cursor.execute('''
@@ -79,6 +79,16 @@ CREATE TABLE IF NOT EXISTS CEX_FEE (
     fee TEXT,
     time_stamp TEXT,
     PRIMARY KEY (token, chain, time_stamp)
+)
+''')
+
+# Create a table to store alert messages
+#bundle_id, chain, token, return_amount, input_amount
+cursor.execute('''
+CREATE TABLE IF NOT EXISTS Alert (
+    bundle_id TEXT,
+    chain TEXT,
+    token TEXT
 )
 ''')
 

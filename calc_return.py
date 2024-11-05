@@ -4,6 +4,7 @@ from decimal import Decimal
 from tool import get_bundle_id, get_relayer_root,get_chain_id
 import pandas as pd
 import os
+from send_alert import check_and_send_alert
 
 
 def calc_bundle(cursor, start_time, end_time, bundle_id, chain, token, data, token_address):
@@ -55,6 +56,14 @@ def calc_bundle(cursor, start_time, end_time, bundle_id, chain, token, data, tok
             "relayer_root": relayer_root,
         }
     )
+    # if (total_output_amount - total_return_amount - total_lp_fee) / total_output_amount > 0.01, send 
+    # calert to slack
+    if (total_output_amount == 0):
+        check_and_send_alert(bundle_id, chain, token, total_return_amount, total_output_amount)
+        return data
+    diff_percentage = (total_output_amount - total_return_amount - total_lp_fee) / total_output_amount
+    if diff_percentage > 0.01:
+        check_and_send_alert(bundle_id, chain, token, total_return_amount, total_output_amount)
     return data
 
 def calc_return(chain):
