@@ -148,7 +148,7 @@ def get_bundle_id(block, cursor, aim_chain, repayment_chain):
 
     repayment_chain_name = get_chain_name(int(repayment_chain))
     cursor.execute(
-        f"SELECT bundle_id FROM Bundle WHERE {aim_chain}_end_block > ? AND chain = ?",
+        f"SELECT bundle_id FROM Bundle WHERE {aim_chain}_end_block >= ? AND chain = ?",
         (block, repayment_chain_name),
     )
     result = cursor.fetchall()
