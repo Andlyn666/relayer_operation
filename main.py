@@ -1,14 +1,15 @@
-from calc_daily import calc_daily
-from tool import update_bundle, create_w3_contract, update_deposit_time, update_cex_fee
-from calc_return import calc_return
 from dotenv import load_dotenv
+from web3 import Web3
+import os
+from upload_file import upload_to_gdrive
 from base import update_base
 from op import update_op
 from arb import update_arb
 from eth import update_eth
-from web3 import Web3
-import os
-from upload_file import upload_to_gdrive
+from calc_daily import calc_daily
+from tool import update_bundle, create_w3_contract, update_deposit_time, update_cex_fee
+from calc_return import calc_return
+from calc_apy import calc_apy
 
 def main():
     load_dotenv()
@@ -33,6 +34,7 @@ def main():
     calc_return("eth")
 
     calc_daily()
+    calc_apy()
     upload_to_gdrive('daily_count.xlsx')
     upload_to_gdrive('return_data.xlsx')
 
