@@ -11,6 +11,7 @@ import hmac
 from binance.spot import Spot as Client
 from dotenv import load_dotenv
 from datetime import datetime
+from decimal import Decimal, InvalidOperation
 
 def get_variable(name):
     conn = sqlite3.connect("mydatabase.db")
@@ -323,14 +324,87 @@ def update_deposit_time():
     conn.close()
     return
 
-def get_token_price(token, currency="usd"):
+# Cache dictionary to store token prices
+price_cache = {}
+
+def get_token_price(token, date=None, currency="usd"):
     key = os.getenv("COIN_KEY")
-    url = f"https://api.coingecko.com/api/v3/simple/price?ids={token}&vs_currencies={currency}&x_cg_demo_api_key={key}"
-    response = requests.get(url)
-    data = response.json()
-    return data[token][currency]
+    default_token_price_dic = {
+        'usd': {
+            "wrapped-bitcoin": 80000,
+            "weth": 3000,
+            "usd-coin": 1,
+            "dai": 1,
+            "tether": 1
+        },
+        'eth': {
+            "wrapped-bitcoin": 27,
+            "weth": 1,
+            "usd-coin": 0.0003,
+            "dai": 0.0003,
+            "tether": 0.0003
+        }
+    }
+
+    if date is None:
+        # get date and turn into 'dd-mm-yyyy'
+        date = datetime.now().strftime("%d-%m-%Y")
+
+    # Create a cache key based on token, date, and currency
+    cache_key = f"{token}_{date}_{currency}"
+
+    # Check if the price is already in the cache
+    if cache_key in price_cache:
+        return price_cache[cache_key]
+
+    url = f"https://api.coingecko.com/api/v3/coins/{token}/history?date={date}&x_cg_demo_api_key={key}"
+    response = None
+    retries = 3
+    delay = 1  # Initial delay in seconds
+
+    for _ in range(retries):
+        try:
+            response = requests.get(url)
+            if response.status_code == 429:
+                print("Rate limit exceeded. Retrying...")
+                time.sleep(delay)
+                delay *= 2  # Exponential backoff
+                continue
+            data = response.json()
+            if "market_data" not in data:
+                print(data)
+                print(f"token: {token}, date: {date}")
+                price_cache[cache_key] = default_token_price_dic[currency][token]
+                return default_token_price_dic[currency][token]
+            price = data['market_data']['current_price'][currency]
+            price_cache[cache_key] = price
+            return price
+        except Exception as e:
+            print(f"Error fetching price for {token} on {date}: {e}")
+            price_cache[cache_key] = default_token_price_dic[currency][token]
+            return default_token_price_dic[currency][token]
+
+    # If all retries fail, return the default price
+    price_cache[cache_key] = default_token_price_dic[currency][token]
+    return default_token_price_dic[currency][token]
+
+def get_token_id(token):
+    token_dic = {
+        "BTC": "wrapped-bitcoin",
+        "ETH": "weth",
+        "USDC": "usd-coin",
+        "DAI": "dai",
+        "USDT": "tether"
+    }
+    return token_dic[token]
 
 def round_decimal(value, decimal=3):
+    try:
+        value = round(value, decimal)
+    except Exception as e:
+        print(f"round_decimal error: {e}")
+        print(f"value: {value}")
+        return value
     return round(value, decimal)
 
 def get_cex_fee_results(cex, start_time, end_time):
@@ -444,12 +518,13 @@ def get_cex_fee(token, start_time, end_time):
 def main():
     load_dotenv()
     # get current timestamp
-    timestamp = int(time.time())
-    # get timestamp 1 day ago
-    timestamp_yesterday = timestamp - 86400 * 60
-    #get_cex_fee_results('weth', timestamp_yesterday, timestamp)
-    update_variable("last_cex_fee_time_stamp_binance", timestamp_yesterday)
-    update_cex_fee()
-
+    # timestamp = int(time.time())
+    # # get timestamp 1 day ago
+    # timestamp_yesterday = timestamp - 86400 * 60
+    # #get_cex_fee_results('weth', timestamp_yesterday, timestamp)
+    # update_variable("last_cex_fee_time_stamp_binance", timestamp_yesterday)
+    # update_cex_fee()
+    price = get_token_price("wrapped-bitcoin")
+    print(price)
 if __name__ == "__main__":
     main()

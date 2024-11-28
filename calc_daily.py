@@ -112,6 +112,7 @@ def calc_daily_count(cursor, output_token, token_name, chain):
         gas_amounts = cursor.fetchall()
         total_gas_amount = sum(Decimal(amount[0]) for amount in gas_amounts)
         total_gas_amount = Decimal(total_gas_amount / 1000000000000000000)
+        total_gas_eth = total_gas_amount
 
         total_order_number = len(gas_amounts)
         success_order_number = len(fill_amounts)
@@ -188,9 +189,9 @@ def calc_daily_count(cursor, output_token, token_name, chain):
         total_lp_fee = round_decimal(total_lp_fee, 5)
         total_gas_amount = round_decimal(total_gas_amount, 8)
 
-        data.append([date_str, profit_usd, total_order_number, success_order_number, total_input_amount, total_output_amount, total_lp_fee, lp_usd, total_gas_amount, gas_usd])
+        data.append([date_str, profit_usd, total_order_number, success_order_number, total_input_amount, total_output_amount, total_lp_fee, lp_usd, total_gas_amount, gas_usd, total_gas_eth])
         time_stamp += 86400
-    df = pd.DataFrame(data, columns=["Date", "Profit(USD)", "Total Fill Orders", "Successful Orders", "Total Input Amount", "Total Output Amount", "Total LP Fee", "Total LP Fee(USD)","Total Gas Fee", "Total Gas Fee(USD)"])
+    df = pd.DataFrame(data, columns=["Date", "Profit(USD)", "Total Fill Orders", "Successful Orders", "Total Input Amount", "Total Output Amount", "Total LP Fee", "Total LP Fee(USD)","Total Gas Fee", "Total Gas Fee(USD)", "Total Gas Fee(ETH)"])
     
     with pd.ExcelWriter('daily_count.xlsx', mode='a', engine='openpyxl', if_sheet_exists='replace') as writer:
         df.to_excel(writer, sheet_name=f'{chain}_{token_name}', index=False)
@@ -227,15 +228,15 @@ def calc_total_profit(cursor):
     with pd.ExcelWriter('daily_count.xlsx', mode='a', engine='openpyxl', if_sheet_exists='replace') as writer:
         df.to_excel(writer, sheet_name=f'total_profit', index=False)
 
-def get_token_prices():
+def get_token_prices(date=None):
     global wbtc_price, weth_price, usdc_price, eth_price, wbtc_price_eth, dai_price, usdt_price
-    wbtc_price = Decimal(get_token_price("wrapped-bitcoin"))
-    weth_price = Decimal(get_token_price("weth"))
-    usdc_price = Decimal(get_token_price("usd-coin"))
-    eth_price = Decimal(get_token_price("ethereum"))
-    wbtc_price_eth = Decimal(get_token_price("wrapped-bitcoin", "eth"))
-    dai_price = Decimal(get_token_price("dai"))
-    usdt_price = Decimal(get_token_price("tether"))
+    wbtc_price = Decimal(get_token_price("wrapped-bitcoin", date))
+    weth_price = Decimal(get_token_price("weth", date))
+    usdc_price = Decimal(get_token_price("usd-coin", date))
+    eth_price = Decimal(get_token_price("ethereum", date))
+    wbtc_price_eth = Decimal(get_token_price("wrapped-bitcoin", date, "eth"))
+    dai_price = Decimal(get_token_price("dai", date))
+    usdt_price = Decimal(get_token_price("tether", date))
 
 def calc_daily():
     conn = sqlite3.connect("mydatabase.db")
