@@ -89,7 +89,7 @@ def get_apy_by_profit(profit, capital):
     return f"{apy * 100:.2f}%"
 
 
-def calc_apy_daily(cursor):
+def calc_apy_daily():
     print("Calculating APY")
     data = []
     
@@ -214,10 +214,7 @@ def calc_apy_daily(cursor):
         combined_df.to_excel(writer, sheet_name='APY', index=False)
 
 def calc_apy():
-    conn = sqlite3.connect("mydatabase.db")
-    cursor = conn.cursor()
-    calc_apy_daily(cursor)
-    conn.close()
+    calc_apy_daily()
 
 def main():
     calc_apy()

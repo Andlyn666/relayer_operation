@@ -56,7 +56,7 @@ def update_bundle(chain, start_block):
     if last_block > start_block:
         start_block = last_block
     propose_list = contract.events.ProposeRootBundle.create_filter(
-        from_block=14819537
+        from_block=last_block
     ).get_all_entries()
     relayer_root_list = []
     for event in propose_list:
@@ -360,13 +360,14 @@ def get_token_price(token, date=None, currency="usd"):
     url = f"https://api.coingecko.com/api/v3/coins/{token}/history?date={date}&x_cg_demo_api_key={key}"
     response = None
     retries = 3
-    delay = 1  # Initial delay in seconds
+    delay = 10  # Initial delay in seconds
 
     for _ in range(retries):
         try:
             response = requests.get(url)
             if response.status_code == 429:
                 print("Rate limit exceeded. Retrying...")
+                print(f"token: {token}, date: {date}")
                 time.sleep(delay)
                 delay *= 2  # Exponential backoff
                 continue
