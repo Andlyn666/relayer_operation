@@ -53,10 +53,11 @@ def update_bundle(chain, start_block):
     cursor = conn.cursor()
     last_bundle_id = get_variable(f"last_{chain}_bundle_id")
     last_block = get_block_by_bundle_id(last_bundle_id, chain, cursor) + 1
+    last_eth_block = get_block_by_bundle_id(last_bundle_id, "eth", cursor)
     if last_block > start_block:
         start_block = last_block
     propose_list = contract.events.ProposeRootBundle.create_filter(
-        from_block=last_block
+        from_block=last_eth_block
     ).get_all_entries()
     relayer_root_list = []
     for event in propose_list:
