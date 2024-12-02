@@ -53,7 +53,7 @@ def update_bundle(chain, start_block):
     cursor = conn.cursor()
     last_bundle_id = get_variable(f"last_{chain}_bundle_id")
     last_block = get_block_by_bundle_id(last_bundle_id, chain, cursor) + 1
-    last_eth_block = get_block_by_bundle_id(last_bundle_id, "eth", cursor)
+    last_eth_block = get_block_by_bundle_id(last_bundle_id, "eth", cursor, chain)
     if last_block > start_block:
         start_block = last_block
     propose_list = contract.events.ProposeRootBundle.create_filter(
@@ -229,10 +229,12 @@ def get_deposit_time(deposit_id_array):
     
     return event_list
 
-def get_block_by_bundle_id(bundle_id, chain, cursor):
+def get_block_by_bundle_id(bundle_id, chain, cursor, bundle_chian=None):
+    if bundle_chian is None:
+        bundle_chian = chain
     cursor.execute(
         f"SELECT {chain}_end_block FROM Bundle WHERE bundle_id = ? AND chain = ?",
-        (bundle_id, chain),
+        (bundle_id, bundle_chian),
     )
     result = cursor.fetchall()
     if result:
