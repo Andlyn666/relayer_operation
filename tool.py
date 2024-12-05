@@ -334,11 +334,12 @@ def get_token_price(token, date=None, currency="usd"):
     key = os.getenv("COIN_KEY")
     default_token_price_dic = {
         'usd': {
-            "wrapped-bitcoin": 80000,
-            "weth": 3000,
+            "wrapped-bitcoin": 90000,
+            "weth": 3500,
             "usd-coin": 1,
             "dai": 1,
-            "tether": 1
+            "tether": 1,
+            "ethereum": 3500
         },
         'eth': {
             "wrapped-bitcoin": 27,
@@ -402,7 +403,7 @@ def get_token_id(token):
     }
     return token_dic[token]
 
-def round_decimal(value, decimal=3):
+def round_decimal(value, decimal=5):
     try:
         value = round(value, decimal)
     except Exception as e:
@@ -528,7 +529,7 @@ def main():
     # #get_cex_fee_results('weth', timestamp_yesterday, timestamp)
     # update_variable("last_cex_fee_time_stamp_binance", timestamp_yesterday)
     # update_cex_fee()
-    price = get_token_price("wrapped-bitcoin")
+    price = get_token_price("ethereum")
     print(price)
 if __name__ == "__main__":
     main()

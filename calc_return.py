@@ -1,10 +1,17 @@
-from web3 import Web3
-import sqlite3
 from decimal import Decimal
-from tool import get_bundle_id, get_relayer_root,get_chain_id
+import sqlite3
 import pandas as pd
-import os
+from dotenv import load_dotenv
+from upload_file import upload_to_gdrive
+from tool import create_w3_contract
+from base import update_base
+from op import update_op
+from arb import update_arb
+from eth import update_eth
+from tool import update_bundle, get_bundle_id, update_deposit_time, get_relayer_root,get_chain_id, update_variable, get_variable
 from send_alert import check_and_send_alert
+
+
 
 
 def calc_bundle(cursor, start_time, end_time, bundle_id, chain, token, data, token_address):
@@ -66,17 +73,18 @@ def calc_bundle(cursor, start_time, end_time, bundle_id, chain, token, data, tok
         check_and_send_alert(bundle_id, chain, token, total_return_amount, total_output_amount)
     return data
 
-def calc_return(chain):
+def calc_return_by_chain(chain):
     conn = sqlite3.connect("mydatabase.db")
     cursor = conn.cursor()
     repayment_chain_id = get_chain_id(chain)
+    start_time = get_variable(f"last_return_time_{chain}")
     fill_list = cursor.execute(
         """
         SELECT * FROM Fill 
-        WHERE repayment_chain = ? AND is_return is NULL AND is_success = 1 
+        WHERE repayment_chain = ? AND is_return is NULL AND is_success = 1 AND CAST(time_stamp AS INTEGER) > ?
         ORDER BY CAST(time_stamp AS INTEGER) ASC
         """,
-        (repayment_chain_id,),
+        (repayment_chain_id, start_time, ),
     ).fetchall()
     print(f"Calculating return for {chain}")
     data_usdc = []
@@ -101,7 +109,8 @@ def calc_return(chain):
         weth_address = "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2"
     if chain == "base":
         dai_address = "0x50c5725949A6F0c72E6C4a641F24049A917DB0Cb"
-        usdc_address = "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913"
+    if chain == "op":
+        usdc_address = "0x0b2C639c533813f4Aa9D7837CAf62653d097Ff85"
     for fill in fill_list:
         aim_chian = fill[9]
         bundle_id = get_bundle_id(fill[13], cursor, aim_chian, fill[17])
@@ -174,14 +183,50 @@ def calc_return(chain):
     file_name = "return_data.xlsx"
 
     with pd.ExcelWriter(file_name, mode='a', engine='openpyxl', if_sheet_exists='replace') as writer:
+        def merge_and_write(sheet_name, new_data):
+            try:
+                existing_df = pd.read_excel(file_name, sheet_name=sheet_name)
+                combined_df = pd.concat([existing_df, new_data]).drop_duplicates(subset=['bundle_id'], keep='last').sort_values('bundle_id')
+            except (FileNotFoundError, ValueError):
+                combined_df = new_data
+            combined_df.to_excel(writer, sheet_name=sheet_name, index=False)
+
         if len(data_usdc) > 0:
-            df_usdc.to_excel(writer, sheet_name=f"{chain}-USDC", index=False)
+            merge_and_write(f"{chain}-USDC", df_usdc)
         if len(data_weth) > 0:
-            df_weth.to_excel(writer, sheet_name=f"{chain}-WETH", index=False)
+            merge_and_write(f"{chain}-WETH", df_weth)
         if len(data_wbtc) > 0:
-            df_wbtc.to_excel(writer, sheet_name=f"{chain}-WBTC", index=False)
+            merge_and_write(f"{chain}-WBTC", df_wbtc)
         if len(data_dai) > 0:
-            df_dai.to_excel(writer, sheet_name=f"{chain}-DAI", index=False)
+            merge_and_write(f"{chain}-DAI", df_dai)
         if len(data_usdt) > 0:
-            df_usdt.to_excel(writer, sheet_name=f"{chain}-USDT", index=False)
+            merge_and_write(f"{chain}-USDT", df_usdt)
+        
+        update_variable(f"last_return_time_{chain}", end_time)
     return
+
+def calc_return():
+    load_dotenv()
+    create_w3_contract()
+    update_base()
+    update_op()
+    update_arb()
+    update_eth()
+    
+    update_deposit_time()
+    update_bundle('base', 19008104)
+    update_bundle("op", 123939334)
+    update_bundle("arb", 247363892)
+    update_bundle('eth', 19008104)
+    calc_return_by_chain("base")
+    calc_return_by_chain("op")
+    calc_return_by_chain("arb")
+    calc_return_by_chain("eth")
+    return
+
+def main():
+    calc_return()
+    upload_to_gdrive('return_data.xlsx')
+
+if __name__ == "__main__":
+    main()
