@@ -260,7 +260,7 @@ def main():
     update_cex_fee()
     calc_daily()
     calc_apy()
-    #upload_to_gdrive('daily_count.xlsx')
+    upload_to_gdrive('daily_count.xlsx')
 
 if __name__ == "__main__":
     main()
